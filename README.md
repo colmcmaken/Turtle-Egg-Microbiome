@@ -6,7 +6,7 @@ Data and coding used for Master's thesis on loggerhead and green sea turtle egg 
 2. Feature Table generated using QIIME2 (**feature-table_2021.tsv.txt**)
 3. SILVA Taxonomy file (**Taxonomy.xlsx**)
 4. Metadata File (**Turtle_Metadata_2021**)
-5. Excel file with list of _POTENTIAL_ egg pathogens (**ALL Pathogen Lists Combined.xlsx**)
+5. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
 6. Excel files used to create Krona Plots (**Krona Plots** file). To view and interact with Krona Plots: Download file > Enable content/macros > Click "Create Chart" > Save as HTML file > Open and Interact!
 7. Full SIMPER analysis lists (**SIMPER** file)
 
