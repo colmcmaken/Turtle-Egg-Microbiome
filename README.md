@@ -3,7 +3,7 @@ Data and coding used for Master's thesis on loggerhead and green sea turtle egg 
 
 **What's Included in Repository**
 1. R Code used for Microbiome Analysis and Sand Grain Size and Sorting Coefficient determination (**Turtle_2021.R**)
-2. Feature Table generated using QIIME2 (**feature-table_2021.tsv.txt**
+2. Feature Table generated using QIIME2 (**feature-table_2021.tsv.txt**)
 3. SILVA Taxonomy file (**Taxonomy.xlsx**)
 4. Metadata File (**Turtle_Metadata_2021**)
 5. Excel file with list of _POTENTIAL_ egg pathogens (**ALL Pathogen Lists Combined.xlsx**)
