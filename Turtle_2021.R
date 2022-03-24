@@ -3,17 +3,20 @@
 #can use "Session" > "Set Working Directory" > "Choose Directory" > Select file you want to use"
 setwd("~/Grad School/Thesis/Data")
 
-####Cleaning data using decontam package
-library(decontam)
+####Load Packages
+library(decontam) #for cleaning
 library(phyloseq)
 library(ggplot2)
 library(qiime2R)
 library(vegan)
 library(base)
 library(microbiome)
+library(pgirmess)
+library(RVAideMemoire)
+library(venn)
 
 
-#load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
+#Load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
 dat <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
 #flip columns to rows
 t.dat <- as.data.frame(t(dat))
@@ -256,9 +259,6 @@ taxa_names(phy_tree)
 physeq = phyloseq(ASV.UF,tax.UF,meta.UF,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
 
-#Phyloseq
-library(phyloseq)
-library(qiime2R)
 
 #######READ STATISTICS
 #Check number of microbes observed in each sample
@@ -310,9 +310,6 @@ taxa_names(phy_tree)
 physeq_clean = phyloseq(ASV.UF,tax.UF,meta.UF,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
 
-#Phyloseq
-library(phyloseq)
-library(qiime2R)
 
 #######READ STATISTICS
 #Check number of microbes observed in each sample
@@ -332,7 +329,6 @@ physeq_clean
 
 
 ##########Alpha Diversity VEGAN
-library(vegan)
 ###Diversity by Sample
 #Species Richness:
 S <- specnumber(dat)
@@ -772,7 +768,6 @@ shapiro.test(AlphaDiversity_ALL$D)
 ##p<0.05 = not normally distributed >> transformations did not work = non-parametric (KRUSKAL-WALLIS)
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_ALL$S ~ AlphaDiversity_ALL$Group)
 #Kruskal-Wallis chi-squared = 144.44, df = 4, p-value < 2.2e-16
 pairwise.wilcox.test(AlphaDiversity_ALL$S, AlphaDiversity_ALL$Group, p.adjust.method = "fdr")
@@ -815,7 +810,6 @@ shapiro.test(AlphaDiversity_CC$D)
 ##p<0.05 = not normally distributed >> transformations did not work = non-parametric (KRUSKAL-WALLIS)
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_CC$S ~ AlphaDiversity_CC$Group)
 #Kruskal-Wallis chi-squared = 114.27, df = 4, p-value < 2.2e-16
 pairwise.wilcox.test(AlphaDiversity_CC$S, AlphaDiversity_CC$Group, p.adjust.method = "fdr")
@@ -868,7 +862,6 @@ TukeyHSD(anova.N)
 ##No significant pairwise comparisons
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_CM$S ~ AlphaDiversity_CM$Group)
 #Kruskal-Wallis chi-squared = 34.342, df = 4, p-value = 6.339e-07
 pairwise.wilcox.test(AlphaDiversity_CM$S, AlphaDiversity_CM$Group, p.adjust.method = "fdr")
@@ -917,7 +910,6 @@ TukeyHSD(anova.N)
 
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_F$S ~ AlphaDiversity_F$Group)
 #Kruskal-Wallis chi-squared = 57.665, df = 4, p-value = 8.971e-12
 pairwise.wilcox.test(AlphaDiversity_F$S, AlphaDiversity_F$Group, p.adjust.method = "fdr")
@@ -939,7 +931,6 @@ kruskal.test(AlphaDiversity_F$D ~ AlphaDiversity_F$Group)
 pairwise.wilcox.test(AlphaDiversity_F$D, AlphaDiversity_F$Group, p.adjust.method = "fdr")
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_F$S ~ AlphaDiversity_F$Group)
 #Kruskal-Wallis chi-squared = 144.44, df = 4, p-value < 2.2e-16
 pairwise.wilcox.test(AlphaDiversity_F$S, AlphaDiversity_F$Group, p.adjust.method = "fdr")
@@ -991,7 +982,6 @@ TukeyHSD(anova.N)
 ##No significant pairwise comparisons
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_H$S ~ AlphaDiversity_H$Group)
 #Kruskal-Wallis chi-squared = 58.803, df = 4, p-value = 5.176e-12
 pairwise.wilcox.test(AlphaDiversity_H$S, AlphaDiversity_H$Group, p.adjust.method = "fdr")
@@ -1013,20 +1003,7 @@ kruskal.test(AlphaDiversity_H$D ~ AlphaDiversity_H$Group)
 pairwise.wilcox.test(AlphaDiversity_H$D, AlphaDiversity_H$Group, p.adjust.method = "fdr")
 
 
-##########Alpha Diversity iNEXT (Hill Numbers)
-library(iNEXT)
-library(ggplot2)
-#Calculate the overall totals for each species:
-spp.totals <- colSums(dat)
-hill.estimates <- iNEXT(spp.totals, q=c(0,2), nboot=100)
-## Examine the results
-hill.estimates
-ggiNEXT(hill.estimates, type=1, facet.var="order")
-
-
 ##########Alpha Diversity Phyloseq
-library(phyloseq)
-library(ggplot2)
 #Estimate richness
 rich = estimate_richness(physeq_clean)
 rich
@@ -1074,7 +1051,6 @@ adonis(dat.bc.dist~Sample.Type, data = Turtle_Metadata_2021)
 #Not significant
 
 #PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
 pairwise.perm.manova(dat.bc.dist,Turtle_Metadata_2021$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons showed no significant differences
@@ -1109,8 +1085,6 @@ legend("bottomright",legend= c("Hatched","Unhatched", "Cloaca", "Nest Sand", "Co
        col=c("red","cyan", "blue4", "green", "pink"), 
        pch=19, cex=0.55)
 ##Saved as "NMDS_SampleType"
-
-
 
 
 
@@ -1169,7 +1143,6 @@ adonis(dat.bc.dist_cm~Sample.Type, data = metadata_cm)
 #Significant
 
 ##PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
 pairwise.perm.manova(dat.bc.dist_cc,metadata_cc$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1292,7 +1265,6 @@ adonis(dat.bc.dist_F~Sample.Type, data = metadata_F)
 #Significant
 
 ##PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
 pairwise.perm.manova(dat.bc.dist_H,metadata_H$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1407,7 +1379,6 @@ adonis(dat.bc.dist_HU~Sample.Type, data = metadata_HU)
 #Significant
 
 #PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
 pairwise.perm.manova(dat.bc.dist_HU,metadata_HU$Sample.Type)
 #              Hatched Egg
 #Unhatched Egg 0.001
@@ -1542,11 +1513,6 @@ sink()
 
 ##########ENVIRONMENTAL DATA
 ######ALL Hatched and Unhatched
-#Make sure all environmental factors are quantitative (change yes/no to 1/0)
-metadata_HU$Recent.Renourishment<-ifelse(metadata_HU$Recent.Renourishment=="Yes",1,0)
-metadata_HU$Roots<-ifelse(metadata_HU$Roots=="Yes",1,0)
-metadata_HU$Washover<-ifelse(metadata_HU$Washover=="Yes",1,0)
-
 #CCA, significance of the enivornmental factors on diversity 
 set.seed(55);env.cca<-cca(dat.ra_HU~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+R.Zone+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HU)
 vif.cca(env.cca)
@@ -1616,11 +1582,6 @@ legend(locator(1),legend= as.character(paste(" ", unique(metadata_HU$Sample.Type
 
 
 ######CCA CC Species Only
-#Turn yes/no to 1/0
-metadata_cc_HU$Recent.Renourishment<-ifelse(metadata_cc_HU$Recent.Renourishment=="Yes",1,0)
-metadata_cc_HU$Roots<-ifelse(metadata_cc_HU$Roots=="Yes",1,0)
-metadata_cc_HU$Washover<-ifelse(metadata_cc_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_cc_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_cc_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1660,11 +1621,6 @@ cca.p[["sites"]]
 
 
 ######CCA CM Species Only
-#Turn yes/no to 1/0
-metadata_cm_HU$Recent.Renourishment<-ifelse(metadata_cm_HU$Recent.Renourishment=="Yes",1,0)
-metadata_cm_HU$Roots<-ifelse(metadata_cm_HU$Roots=="Yes",1,0)
-metadata_cm_HU$Washover<-ifelse(metadata_cm_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_cm_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_cm_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1714,11 +1670,6 @@ cca.p[["sites"]]
 
 
 ######CCA Fort Lauderdale Beach Only
-#Turn yes/no to 1/0
-metadata_F_HU$Recent.Renourishment<-ifelse(metadata_F_HU$Recent.Renourishment=="Yes",1,0)
-metadata_F_HU$Roots<-ifelse(metadata_F_HU$Roots=="Yes",1,0)
-metadata_F_HU$Washover<-ifelse(metadata_F_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_F_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_F_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1768,11 +1719,6 @@ cca.p[["sites"]]
 
 
 ######CCA Hillsboro Beach Only
-#Turn yes/no to 1/0
-metadata_H_HU$Recent.Renourishment<-ifelse(metadata_H_HU$Recent.Renourishment=="Yes",1,0)
-metadata_H_HU$Roots<-ifelse(metadata_H_HU$Roots=="Yes",1,0)
-metadata_H_HU$Washover<-ifelse(metadata_H_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_H_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_H_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1930,7 +1876,6 @@ adonis(dat.bc.dist~Nest.Number, data = metadata_HatchOnly)
 #12.99% of the sums of squares can be explained significantly by "Nest.Number"
 
 #PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
 pairwise.perm.manova(dat.bc.dist,metadata_HatchOnly$Nest.Number)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons showed no significant differences##PerMANOVA to see what sites have the differences
@@ -2421,8 +2366,7 @@ dat.t_F <- as.data.frame(t(dat_F))
 write.csv(dat.t_F, "F_Binary.csv")
 dat.t_H <- as.data.frame(t(dat_H))
 write.csv(dat.t_H, "H_Binary.csv")
-#Load Required Package
-library(venn)
+
 ##ALL DATA
 Venn_Data <- read.delim("~/Grad School/Thesis/Data/SampleType_ALL_Binary.txt", row.names=1)
 venn(Venn_Data, sncs=0.5, zcolor="style")
