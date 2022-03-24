@@ -4,8 +4,15 @@ Data and coding used for Master's thesis on loggerhead and green sea turtle egg 
 **What's Included in Repository**
 1. R Code used for Microbiome Analysis and Sand Grain Size and Sorting Coefficient determination
 2. Excel file with list of _POTENTIAL_ egg pathogens
-3. Krona Plot HTMLs
+3. Krona Plot 
 4. Full SIMPER analysis lists
+
+**Notes On File Names**
+* CC = Loggerhead samples (_**C**aretta **c**aretta_)
+* CM = Green Turtle samples (_**C**helonia **m**ydas_)
+* F = Fort Lauderdale Beach samples
+* H = Hillsboro Beach samples
+* HU = Hatched and Unhatched Egg comparisons
 
 Sequence data can be found on NCBI’s Short Read Archive: BioProject accession PRJNA804903
 
@@ -39,7 +46,3 @@ Publication version can be accessed at
 
 **Please cite this paper if you use this repository:**
 
-
-**Interactive Krona Plots**
-
-Nests with [79-89% Hatching Success](file:///C:/Users/colmc/Documents/Grad%20School/Thesis/Data/Krona/79-89%25.html?dataset=0&node=0&collapse=true&color=false&depth=7&font=11&key=true)
