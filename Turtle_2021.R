@@ -14,6 +14,15 @@ library(microbiome)
 library(pgirmess)
 library(RVAideMemoire)
 library(venn)
+library("G2Sd")
+
+#SAND Sieve
+#Import Data
+SandSieveMetadata <- read.csv("~/Grad School/Thesis/Data/Sand Sieve Data 2021.csv", row.names=1)
+#Run Stats
+SandStats <- granstat(SandSieveMetadata,statistic="all",aggr=TRUE,modes=FALSE)
+#Save as Excel file
+write.csv(SandStats, "SandStats2021.csv")
 
 
 #Load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
