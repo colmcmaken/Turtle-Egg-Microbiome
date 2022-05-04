@@ -2,12 +2,13 @@
 Data and coding used for Master's thesis on loggerhead and green sea turtle egg microbiomes
 
 **What's Included in Repository**
-1. R Code used for Microbiome Analysis and Sand Grain Size and Sorting Coefficient determination (**Turtle_2021.R**)
-2. SILVA Taxonomy file (**Taxonomy.xlsx**)
-3. Metadata File (**Turtle_Metadata_2021**)
-4. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
-5. Excel files used to create Krona Plots (**Krona Plots** file). To view and interact with Krona Plots: Download file > Enable content/macros > Click "Create Chart" > Save as HTML file > Open and Interact!
-6. Full SIMPER analysis lists (**SIMPER** file)
+1. R Code used for Microbiome Analysis (**Turtle_2021.R**)
+2. R Code used for Environmental Data Analysis (**Turtle_2021_ENV.R**
+3. SILVA Taxonomy file (**Taxonomy.xlsx**)
+4. Metadata File (**Turtle_Metadata_2021**)
+5. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
+6. Excel files used to create Krona Plots (**Krona Plots** file). To view and interact with Krona Plots: Download file > Enable content/macros > Click "Create Chart" > Save as HTML file > Open and Interact!
+7. Full SIMPER analysis lists (**SIMPER** file)
 
 **Notes On File Names**
 * CC = Loggerhead samples (_**C**aretta **c**aretta_)
