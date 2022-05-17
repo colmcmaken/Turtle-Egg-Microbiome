@@ -11,20 +11,23 @@ library(qiime2R)
 library(vegan)
 library(base)
 library(microbiome)
+library(pgirmess)      #for Kruskal-Wallis test
+library(iNEXT)         #for Hill Numbers
+library(RVAideMemoire) #for PERMANOVA test
+library(venn)          #for Venn diagrams
 
-
-#load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
+#Load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
 dat <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(dat))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
 
 ####Convert Raw Data to Relative Abundance
 dat.ra<-decostand(dat, method = "total")
 ##Export Relative Abundance table 
 write.csv(dat.ra, "Turtle_2021_RelativeAbundance_Raw.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+##Export relative abundance table transposed (needed for merging of taxonomy)
 dat.rat <- as.data.frame(t(dat.ra))
 write.csv(dat.rat, "Turtle_2021_RelativeAbundance_RawT.csv")
 
@@ -78,9 +81,9 @@ write.table(t(otu_table(noncontam.prev)), "NonContaminated_Prev.txt", sep = "\t"
 
 #Identify Contaminants - Frequency, using Prevelance Table
 NonContaminated_Prev <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Prev_NegR.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat2 <- as.data.frame(t(NonContaminated_Prev))
-#set t.dat as dat
+#Set t.dat as dat
 dat2 <- t.dat2
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
 ASV.UF.clean = otu_table(as.matrix(dat2), taxa_are_rows=FALSE)
@@ -107,16 +110,16 @@ write.table(t(otu_table(noncontam.freq)), "NonContaminated_Freq.txt", sep = "\t"
 
 #Import Data
 Data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(Data))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+##Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
 
-##remove ASVs that occur <0.005
+##Remove ASVs that occur <0.005
 dat.otus.005per<-which(colSums(dat.pa) > (0.005*nrow(dat.pa)))
 dat.005per<-dat[,dat.otus.005per]
 #3,109 taxa
@@ -150,9 +153,9 @@ noncontam.prev
 write.table(t(otu_table(noncontam.prev)), "NonContaminated_Prev1.txt", sep = "\t", row.names = TRUE, col.names = NA, quote = FALSE)
 #Identify Contaminants - Frequency, using Prevelance Table
 NonContaminated_Prev1 <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Prev1_NegR.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat3 <- as.data.frame(t(NonContaminated_Prev1))
-#set t.dat as dat
+#Set t.dat as dat
 dat3 <- t.dat3
 
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
@@ -177,12 +180,12 @@ write.table(t(otu_table(noncontam.freq01)), "NonContaminated_Freq01.txt", sep = 
 
 #Import Data
 Data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq01.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(Data))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
 
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+##Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
@@ -198,7 +201,7 @@ write.csv(dat.001per.t, "Turtle_2021_Count_01T.csv")
 dat.ra<-decostand(dat.001per, method = "total")
 ##Export Relative Abundance table 
 write.csv(dat.ra, "Turtle_2021_RelativeAbundance_01.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+##Export relative abundance table transposed (needed for merging of taxonomy)
 dat.rat <- as.data.frame(t(dat.ra))
 write.csv(dat.rat, "Turtle_2021_RelativeAbundance_01T.csv")
 write.table(dat.rat, "Turtle_2021_RelativeAbundance_01T.txt", sep = "\t", row.names = TRUE, col.names = NA, quote = FALSE)
@@ -218,7 +221,7 @@ common.rownames <- intersect(rownames(Data), rownames(taxonomy))
 #Remove Taxonomy that got removed via Cleaning process 
 Data <- Data[common.rownames,]
 Taxonomy <- taxonomy[common.rownames,]
-##check that all rows match
+##Check that all rows match
 all.equal(rownames(Data),rownames(Taxonomy))
 #Merge Taxonomy and Data
 Primer <- merge(Data, Taxonomy, by = 0)  
@@ -234,9 +237,9 @@ write.csv(Primer, "Primer.csv")
 ###Look at Raw Data Stats
 #Import Data: before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
 dat <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(dat))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
 #Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
@@ -257,9 +260,6 @@ physeq = phyloseq(ASV.UF,tax.UF,meta.UF,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
 
 #Phyloseq
-library(phyloseq)
-library(qiime2R)
-
 #######READ STATISTICS
 #Check number of microbes observed in each sample
 sample_sums(physeq)
@@ -280,11 +280,11 @@ physeq
 ###Look at Conservative Clean Data Stats
 #Import Data
 data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq01.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(data))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+##Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
@@ -310,10 +310,6 @@ taxa_names(phy_tree)
 physeq_clean = phyloseq(ASV.UF,tax.UF,meta.UF,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
 
-#Phyloseq
-library(phyloseq)
-library(qiime2R)
-
 #######READ STATISTICS
 #Check number of microbes observed in each sample
 sample_sums(physeq_clean)
@@ -331,8 +327,7 @@ physeq_clean
 ##16516 taxa and 243 samples
 
 
-##########Alpha Diversity VEGAN
-library(vegan)
+##########Alpha Diversity
 ###Diversity by Sample
 #Species Richness:
 S <- specnumber(dat)
@@ -772,7 +767,6 @@ shapiro.test(AlphaDiversity_ALL$D)
 ##p<0.05 = not normally distributed >> transformations did not work = non-parametric (KRUSKAL-WALLIS)
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_ALL$S ~ AlphaDiversity_ALL$Group)
 #Kruskal-Wallis chi-squared = 144.44, df = 4, p-value < 2.2e-16
 pairwise.wilcox.test(AlphaDiversity_ALL$S, AlphaDiversity_ALL$Group, p.adjust.method = "fdr")
@@ -815,7 +809,6 @@ shapiro.test(AlphaDiversity_CC$D)
 ##p<0.05 = not normally distributed >> transformations did not work = non-parametric (KRUSKAL-WALLIS)
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_CC$S ~ AlphaDiversity_CC$Group)
 #Kruskal-Wallis chi-squared = 114.27, df = 4, p-value < 2.2e-16
 pairwise.wilcox.test(AlphaDiversity_CC$S, AlphaDiversity_CC$Group, p.adjust.method = "fdr")
@@ -868,7 +861,6 @@ TukeyHSD(anova.N)
 ##No significant pairwise comparisons
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_CM$S ~ AlphaDiversity_CM$Group)
 #Kruskal-Wallis chi-squared = 34.342, df = 4, p-value = 6.339e-07
 pairwise.wilcox.test(AlphaDiversity_CM$S, AlphaDiversity_CM$Group, p.adjust.method = "fdr")
@@ -917,7 +909,6 @@ TukeyHSD(anova.N)
 
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_F$S ~ AlphaDiversity_F$Group)
 #Kruskal-Wallis chi-squared = 57.665, df = 4, p-value = 8.971e-12
 pairwise.wilcox.test(AlphaDiversity_F$S, AlphaDiversity_F$Group, p.adjust.method = "fdr")
@@ -965,7 +956,6 @@ TukeyHSD(anova.N)
 ##Significant pairwise comparisons
 
 ########Kruskal Wallis: Nonparametric Data (not normal)
-library(pgirmess)
 kruskal.test(AlphaDiversity_H$S ~ AlphaDiversity_H$Group)
 #Kruskal-Wallis chi-squared = 58.803, df = 4, p-value = 5.176e-12
 pairwise.wilcox.test(AlphaDiversity_H$S, AlphaDiversity_H$Group, p.adjust.method = "fdr")
@@ -988,7 +978,6 @@ pairwise.wilcox.test(AlphaDiversity_H$D, AlphaDiversity_H$Group, p.adjust.method
 
 
 ##########Alpha Diversity iNEXT (Hill Numbers)
-library(iNEXT)
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Calculate the overall totals for each species:
 ##CC
@@ -1057,7 +1046,7 @@ mCM_ST <- as.matrix(t(CMSumSampleType.Label))
 CC_CM_matrix<-list(mCC,mCM)
 #Compute diversity estimates of order q
 hill.estimates <- iNEXT(CC_CM_matrix, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1073,7 +1062,7 @@ ggiNEXT(hill.estimates, type=3, facet.var="order", color.var="site") +
 ###CC by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.CC <- iNEXT(mCC_ST, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates.ST.CC
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1088,7 +1077,7 @@ ggiNEXT(hill.estimates.ST.CC, type=3, facet.var="order", color.var="site") +
 ###CM by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.CM <- iNEXT(mCM_ST, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates.ST.CM
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1172,7 +1161,7 @@ colnames(FT_H_matrix.Label) <- c("Fort Lauderdale", "Hillsboro")
 FT_H_matrix.Label.z<-FT_H_matrix.Label[rowSums(FT_H_matrix.Label[])>0,]
 #Compute diversity estimates of order q
 hill.estimates <- iNEXT(FT_H_matrix.Label.z, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1188,7 +1177,7 @@ ggiNEXT(hill.estimates, type=3, facet.var="order", color.var="site") +
 ###Fort Lauderdale by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.FT <- iNEXT(mFT_ST, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates.ST.FT
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1203,7 +1192,7 @@ ggiNEXT(hill.estimates.ST.FT, type=3, facet.var="order", color.var="site") +
 ###Hillsboro by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.H <- iNEXT(mH_ST, q=c(0,2), datatype="abundance", nboot=100)
-## Examine the results
+##Examine the results
 hill.estimates.ST.H
 #Visualize Results
 ##Sample-size-based R/E curve
@@ -1256,6 +1245,7 @@ ano = anosim(dat.ra, Turtle_Metadata_2021$Sample.Type, permutations = 9999, dist
 ano
 #ANOSIM statistic R: -0.002302 
 #Significance: 0.5269 
+#Not significant
 
 #Adonis - Analysis of variance using distance matrices
 dat.bc.dist<-vegdist(dat.ra, method = "bray")
@@ -1264,8 +1254,7 @@ adonis(dat.bc.dist~Sample.Type, data = Turtle_Metadata_2021)
 #1.353% of the sums of squares can be explained by "Sample.Type"
 #Not significant
 
-#PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
+#PERMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.bc.dist,Turtle_Metadata_2021$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons showed no significant differences
@@ -1322,8 +1311,7 @@ Species.SampleType.test
 ##Comparing by species within each sample type had significant differences
 
 ###Look at each species individually
-##Remove unwanted samples from metadata
-#Import metadata for cleaning
+#Import metadata & remove unwanted samples
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Remove CM species
 metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
@@ -1374,8 +1362,7 @@ adonis(dat.bc.dist_cm~Sample.Type, data = metadata_cm)
 #27.33% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-##PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
+##PERMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.bc.dist_cc,metadata_cc$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1397,7 +1384,7 @@ pairwise.perm.manova(dat.bc.dist_cm,metadata_cm$Sample.Type)
 
 
 ############Cloaca Comparsion
-#Import metadata for cleaning
+#Import metadata
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Remove Cloaca, Nest, Control
 metadata_cloaca <- droplevels(metadata[!metadata$Sample.Type == 'Hatched Egg',])
@@ -1443,7 +1430,7 @@ sink()
 
 ##########SAMPLE TYPE BY BEACH COMPARISON
 ##Remove unwanted samples from metadata
-#Import metadata for cleaning
+#Import metadata
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Remove CM Data
 metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
@@ -1497,8 +1484,7 @@ adonis(dat.bc.dist_F~Sample.Type, data = metadata_F)
 #20.36% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-##PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
+##PERMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.bc.dist_H,metadata_H$Sample.Type)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1521,7 +1507,7 @@ pairwise.perm.manova(dat.bc.dist_F,metadata_F$Sample.Type)
 
 
 ############Sand Comparsion
-#Import metadata for cleaning
+#Import metadata
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Remove Cloaca, Nest, Eggs
 metadata_sand <- droplevels(metadata[!metadata$Sample.Type == 'Hatched Egg',])
@@ -1583,8 +1569,7 @@ ano_N
 
 
 ###########HATCHED VS UNHATCHED EGG COMPARISON ALL
-##Remove unwanted samples from metadata
-#Import metadata for cleaning
+#Import metadata & remove unwanted samples
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Remove Cloaca, Nest, Control
 metadata_HU <- droplevels(metadata[!metadata$Sample.Type == c('Cloaca','Nest Sand','Control Sand'),])
@@ -1612,8 +1597,7 @@ adonis(dat.bc.dist_HU~Sample.Type, data = metadata_HU)
 #7.794% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-#PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
+#PERMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.bc.dist_HU,metadata_HU$Sample.Type)
 #              Hatched Egg
 #Unhatched Egg 0.001
@@ -1748,11 +1732,6 @@ sink()
 
 ##########ENVIRONMENTAL DATA
 ######ALL Hatched and Unhatched
-#Make sure all environmental factors are quantitative (change yes/no to 1/0)
-metadata_HU$Recent.Renourishment<-ifelse(metadata_HU$Recent.Renourishment=="Yes",1,0)
-metadata_HU$Roots<-ifelse(metadata_HU$Roots=="Yes",1,0)
-metadata_HU$Washover<-ifelse(metadata_HU$Washover=="Yes",1,0)
-
 #CCA, significance of the enivornmental factors on diversity 
 set.seed(55);env.cca<-cca(dat.ra_HU~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+R.Zone+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HU)
 vif.cca(env.cca)
@@ -1822,11 +1801,6 @@ legend(locator(1),legend= as.character(paste(" ", unique(metadata_HU$Sample.Type
 
 
 ######CCA CC Species Only
-#Turn yes/no to 1/0
-metadata_cc_HU$Recent.Renourishment<-ifelse(metadata_cc_HU$Recent.Renourishment=="Yes",1,0)
-metadata_cc_HU$Roots<-ifelse(metadata_cc_HU$Roots=="Yes",1,0)
-metadata_cc_HU$Washover<-ifelse(metadata_cc_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_cc_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_cc_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1866,11 +1840,6 @@ cca.p[["sites"]]
 
 
 ######CCA CM Species Only
-#Turn yes/no to 1/0
-metadata_cm_HU$Recent.Renourishment<-ifelse(metadata_cm_HU$Recent.Renourishment=="Yes",1,0)
-metadata_cm_HU$Roots<-ifelse(metadata_cm_HU$Roots=="Yes",1,0)
-metadata_cm_HU$Washover<-ifelse(metadata_cm_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_cm_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_cm_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1920,11 +1889,6 @@ cca.p[["sites"]]
 
 
 ######CCA Fort Lauderdale Beach Only
-#Turn yes/no to 1/0
-metadata_F_HU$Recent.Renourishment<-ifelse(metadata_F_HU$Recent.Renourishment=="Yes",1,0)
-metadata_F_HU$Roots<-ifelse(metadata_F_HU$Roots=="Yes",1,0)
-metadata_F_HU$Washover<-ifelse(metadata_F_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_F_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_F_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -1974,11 +1938,6 @@ cca.p[["sites"]]
 
 
 ######CCA Hillsboro Beach Only
-#Turn yes/no to 1/0
-metadata_H_HU$Recent.Renourishment<-ifelse(metadata_H_HU$Recent.Renourishment=="Yes",1,0)
-metadata_H_HU$Roots<-ifelse(metadata_H_HU$Roots=="Yes",1,0)
-metadata_H_HU$Washover<-ifelse(metadata_H_HU$Washover=="Yes",1,0)
-
 set.seed(55);env.cca<-cca(dat.ra_H_HU~pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_H_HU)
 vif.cca(env.cca)
 #If VIF higher than 10 remove factor with highest VIF (variance inflation factor)
@@ -2157,8 +2116,7 @@ adonis(dat.bc.dist~Nest.Number, data = metadata_HatchOnly)
 #R2= 0.12988, P-value= 0.001
 #12.99% of the sums of squares can be explained significantly by "Nest.Number"
 
-#PerMANOVA to see what sites have the differences
-library(RVAideMemoire)
+#PERMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.bc.dist,metadata_HatchOnly$Nest.Number)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons showed no significant differences##PerMANOVA to see what sites have the differences
@@ -2649,8 +2607,7 @@ dat.t_F <- as.data.frame(t(dat_F))
 write.csv(dat.t_F, "F_Binary.csv")
 dat.t_H <- as.data.frame(t(dat_H))
 write.csv(dat.t_H, "H_Binary.csv")
-#Load Required Package
-library(venn)
+
 ##ALL DATA
 Venn_Data <- read.delim("~/Grad School/Thesis/Data/SampleType_ALL_Binary.txt", row.names=1)
 venn(Venn_Data, sncs=0.5, zcolor="style")
