@@ -3,7 +3,7 @@ Data and coding used for Master's thesis on loggerhead and green sea turtle egg 
 
 **What's Included in Repository**
 1. R Code used for Microbiome Analysis (**Turtle_2021.R**)
-2. R Code used for Environmental Data Analysis (**Turtle_2021_ENV.R**
+2. R Code used for Environmental Data Analysis (**Turtle_2021_ENV.R**)
 3. SILVA Taxonomy file (**Taxonomy.xlsx**)
 4. Metadata File (**Turtle_Metadata_2021**)
 5. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
