@@ -1429,6 +1429,21 @@ sink()
 
 
 ##########SAMPLE TYPE BY BEACH COMPARISON
+#Two-Way ANOSIM
+SampleType.Beach.test <- anosim(dat.ra_cc, metadata_cc$Sample.Type, strata = metadata_cc$Beach,
+                                  permutations = 9999)
+Beach.SampleType.test <- anosim(dat.ra_cc, metadata_cc$Beach, strata = metadata_cc$Sample.Type,
+                                  permutations = 9999)
+###Tests for differences between Sample Types within Beaches
+SampleType.Beach.test
+#ANOSIM statistic R: 0.4925 
+#Significance: 1e-04 
+
+###Tests for differences between Beaches within Sample Types
+Beach.SampleType.test
+#ANOSIM statistic R: 0.09194 
+#Significance: 1e-04
+
 ##Remove unwanted samples from metadata
 #Import metadata
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
