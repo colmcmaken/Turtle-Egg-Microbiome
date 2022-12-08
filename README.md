@@ -43,9 +43,8 @@ _Samples Per Nest_
 
 All sampling approved and conducted by authorized personnel under Florida Fish and Wildlife Commision (FWC) Marine Turtle Permits (MTP) MTP-21-255 and MTP-21-214
 
-Master's thesis can be found at 
+Master's thesis can be found at https://nsuworks.nova.edu/hcas_etd_all/84
 
 Publication version can be accessed at
-
-**Please cite this paper if you use this repository:**
+    **Please cite this paper if you use this repository:**
 
