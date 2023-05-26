@@ -4,7 +4,7 @@ Data and coding used for Master's thesis and publication on loggerhead and green
 **What's Included in Repository**
 1. R Code used for Microbiota Analysis (**Turtle_2021.R**)
 2. R Code used for Environmental Data Analysis (**Turtle_2021_ENV.R**)
-3. QIIME Output files (feature table, phylogenetic tree, taxonomy within **QIIME Output** file)
+3. QIIME Output files (feature table, phylogenetic tree, taxonomy within **QIIME Outputs** file)
 4. SILVA Taxonomy file (**Taxonomy.xlsx**)
 5. Metadata File (**Turtle_Metadata_2021**)
 6. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
