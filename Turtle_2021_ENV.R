@@ -661,4 +661,33 @@ wilcox.test(Sorting.Coefficient ~ Beach, conf.int=TRUE)
 #0.024 0.464
 
 detach(Nest_Differences_CC)
+
+
+
+
+#######BCSTCP Full Data - Hatching Success
+#Import data
+BCSTCP_HatchingSuccess <- read.delim("~/Grad School/Thesis/Data/BCSTCP_HatchingSuccess.txt")
+
+class(BCSTCP_HatchingSuccess$Beach)
+BCSTCP_HatchingSuccess$Beach <-factor(BCSTCP_HatchingSuccess$Beach)
+
+attach(BCSTCP_HatchingSuccess)
+levels(Beach)                
+##"FT" "H" 
+
+#Check Normality
+boxplot (HS~Beach)
+###Saved as "Hatching Success_ALL"
+shapiro.test(subset(BCSTCP_HatchingSuccess,Beach=='FT')$HS)
+##W = 0.61289, p-value < 2.2e-16
+##Data is not normally distributed >> Transform data
+shapiro.test(log(subset(BCSTCP_HatchingSuccess,Beach=='FT')$HS))
+shapiro.test(sqrt(subset(BCSTCP_HatchingSuccess,Beach=='FT')$HS))
+##p-value < 0.05 = data is non-parametric
+
+#Non-parametric two-tailed t-test
+##H0: A<B , H1: A>B
+wilcox.test(HS~Beach,alternative='greater')
+##W = 323344, p-value < 2.2e-16
                 
