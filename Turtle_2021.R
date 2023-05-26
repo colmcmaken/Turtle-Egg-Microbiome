@@ -1,6 +1,6 @@
-######TURTLE 2021 THESIS DATA
-#set up working directory
-#can use "Session" > "Set Working Directory" > "Choose Directory" > Select file you want to use"
+######TURTLE 2021 THESIS & PUBLICATION DATA
+#Set up working directory
+#Can use "Session" > "Set Working Directory" > "Choose Directory" > Select file you want to use
 setwd("~/Grad School/Thesis/Data")
 
 ####Load Packages
@@ -15,29 +15,32 @@ library(iNEXT) #Hill Number Analysis
 library(RVAideMemoire) #PermANOVA Test
 library(vegan)
 library(venn) #Venn Diagrams
+library(lme4) #GLMM
+library(emmeans) #GLMM pairwise test
+library(report)
 
 
-#load data, before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
+#Load data, before loading make sure .tsv does not have words/phrases above ASV ID row, remove # from ASV
 data <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(data))
-#set t.dat as dat
+#Set t.dat as dat file
 dat <- t.dat
 
 ####Convert Raw Data to Relative Abundance
 dat.ra<-decostand(dat, method = "total")
-##Export Relative Abundance table 
+##Export relative abundance table 
 write.csv(dat.ra, "Turtle_2021_RelativeAbundance_Raw.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+##Export relative abundance table transposed (needed for merging of taxonomy)
 dat.rat <- as.data.frame(t(dat.ra))
 write.csv(dat.rat, "Turtle_2021_RelativeAbundance_RawT.csv")
 
-#Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
+#Import taxonomy table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Contamination_Metadata.txt", row.names=1)
+#Import metadata
+metadata = read.delim("~/Grad School/Thesis/Data/Contamination_Metadata.txt", row.names=1)
 #Load in QIIME tree
-phy_tree=qza_to_phyloseq(tree="rooted-tree.qza")
+phy_tree = qza_to_phyloseq(tree="rooted-tree.qza")
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
 ASV.UF = otu_table(as.matrix(dat), taxa_are_rows=FALSE)
 tax.UF = tax_table(as.matrix(taxonomy))
@@ -50,7 +53,7 @@ taxa_names(phy_tree)
 physeq = phyloseq(ASV.UF,tax.UF,meta.UF,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
 
-#Check Raw Counts
+#Check raw counts
 physeq
 # phyloseq-class experiment-level object
 # otu_table()   OTU Table:         [ 16646 taxa and 245 samples ]
@@ -76,23 +79,13 @@ noncontam.prev
 # tax_table()   Taxonomy Table:    [ 16533 taxa by 8 taxonomic ranks ]
 # phy_tree()    Phylogenetic Tree: [ 16533 tips and 16506 internal nodes ]
 
-#Export
+#Export, Remove Controls
 write.table(t(otu_table(noncontam.prev)), "NonContaminated_Prev.txt", sep = "\t", row.names = TRUE, col.names = NA, quote = FALSE)
 
 
 #Identify Contaminants - Frequency, using Prevelance Table
-NonContaminated_Prev <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Prev_NegR.txt", row.names=1)
-#flip columns to rows
-t.dat2 <- as.data.frame(t(NonContaminated_Prev))
-#set t.dat as dat
-dat2 <- t.dat2
-#Make a phyloseq objects which includes the dat, metadata, and taxonomy
-ASV.UF.clean = otu_table(as.matrix(dat2), taxa_are_rows=FALSE)
-#Merge Files
-physeq_clean = phyloseq(ASV.UF.clean,tax.UF,meta.UF,phy_tree)
-
 ###Threshold=0.5
-contamdf.freq05 <- isContaminant(physeq_clean, method="frequency", conc="QIIME_Reads", threshold=0.5)
+contamdf.freq05 <- isContaminant(noncontam.prev, method="frequency", conc="QIIME_Reads", threshold=0.5)
 table(contamdf.freq05$contaminant)
 # FALSE  TRUE 
 # 13447  3086 
@@ -111,32 +104,32 @@ write.table(t(otu_table(noncontam.freq)), "NonContaminated_Freq.txt", sep = "\t"
 
 #Import Data
 data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(data))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+###Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
 
-##remove ASVs that occur <0.005
+###Remove ASVs that occur <0.005
 dat.otus.005per<-which(colSums(dat.pa) > (0.005*nrow(dat.pa)))
 dat.005per<-dat[,dat.otus.005per]
 #3,109 taxa
 
 ####Convert Clean Data to Relative Abundance
 dat.ra<-decostand(dat.001per, method = "total")
-##Export Relative Abundance table 
+#Export relative abundance table 
 write.csv(dat.ra, "Turtle_2021_RelativeAbundance_05.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+#Export relative abundance table transposed (needed for merging of taxonomy)
 dat.rat <- as.data.frame(t(dat.ra))
 write.csv(dat.rat, "Turtle_2021_RelativeAbundance_05T.csv")
 
 
 ######################CONSERVATIVE CLEANING
 #Identify Contaminants - Prevalence
-#Threshold 0.1
+###Threshold 0.1
 sample_data(physeq)$is.neg <- sample_data(physeq)$Sample_or_Control == "Control"
 contamdf.prev <- isContaminant(physeq, method="prevalence", neg="is.neg", threshold = 0.1)
 table(contamdf.prev$contaminant)
@@ -150,21 +143,12 @@ noncontam.prev
 # tax_table()   Taxonomy Table:    [ 13447 taxa by 8 taxonomic ranks ]
 # phy_tree()    Phylogenetic Tree: [ 13447 tips and 13435 internal nodes ]
 
-#Export, Remove COntrols and Use as Data Frame
+#Export, Remove Controls
 write.table(t(otu_table(noncontam.prev)), "NonContaminated_Prev1.txt", sep = "\t", row.names = TRUE, col.names = NA, quote = FALSE)
-#Identify Contaminants - Frequency, using Prevelance Table
-NonContaminated_Prev1 <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Prev1_NegR.txt", row.names=1)
-#flip columns to rows
-t.dat3 <- as.data.frame(t(NonContaminated_Prev1))
-#set t.dat as dat
-dat3 <- t.dat3
 
-#Make a phyloseq objects which includes the dat, metadata, and taxonomy
-ASV.UF.clean = otu_table(as.matrix(dat3), taxa_are_rows=FALSE)
-#Merge Files
-physeq_clean = phyloseq(ASV.UF.clean,tax.UF,meta.UF,phy_tree)
+#Identify Contaminants - Frequency, using Prevelance Table
 ###Threshold=0.1
-contamdf.freq01 <- isContaminant(physeq_clean, method="frequency", conc="QIIME_Reads", threshold=0.1)
+contamdf.freq01 <- isContaminant(noncontam.prev, method="frequency", conc="QIIME_Reads", threshold=0.1)
 table(contamdf.freq01$contaminant)
 # FALSE  TRUE 
 # 16518  107 
@@ -181,12 +165,12 @@ write.table(t(otu_table(noncontam.freq01)), "NonContaminated_Freq01.txt", sep = 
 
 #Import Data
 Data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq01.txt", row.names=1)
-#flip columns to rows
+#Flip columns to rows
 t.dat <- as.data.frame(t(Data))
-#set t.dat as dat
+#Set t.dat as dat
 dat <- t.dat
 
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+###Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
@@ -194,15 +178,15 @@ dat.001per<-dat[,dat.otus.001per]
 
 #Export Clean Count Table
 write.csv(dat.001per, "Turtle_2021_Count_01.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+#Export count table transposed (needed for merging of taxonomy)
 dat.001per.t <- as.data.frame(t(dat.001per))
 write.csv(dat.001per.t, "Turtle_2021_Count_01T.csv")
 
 ####Convert Clean Data to Relative Abundance
 dat.ra<-decostand(dat.001per, method = "total")
-##Export Relative Abundance table 
+#Export relative abundance table 
 write.csv(dat.ra, "Turtle_2021_RelativeAbundance_01.csv")
-##export relative abundance table transposed (needed for merging of taxonomy)
+#Export relative abundance table transposed (needed for merging of taxonomy)
 dat.rat <- as.data.frame(t(dat.ra))
 write.csv(dat.rat, "Turtle_2021_RelativeAbundance_01T.csv")
 write.table(dat.rat, "Turtle_2021_RelativeAbundance_01T.txt", sep = "\t", row.names = TRUE, col.names = NA, quote = FALSE)
@@ -213,19 +197,19 @@ write.table(dat.rat, "Turtle_2021_RelativeAbundance_01T.txt", sep = "\t", row.na
 
 #################Merge Tables for Primer
 #Import Data
-Data <- read.delim("~/Grad School/Thesis/Data/Turtle_2021_Count_01T.txt", row.names=1)
+dat <- read.delim("~/Grad School/Thesis/Data/Turtle_2021_Count_01T.txt", row.names=1)
 #Import Taxonomy
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
 
 #Match Taxonomy in data and taxonomy files
-common.rownames <- intersect(rownames(Data), rownames(taxonomy))
+common.rownames <- intersect(rownames(dat), rownames(taxonomy))
 #Remove Taxonomy that got removed via Cleaning process 
-Data <- Data[common.rownames,]
+dat <- dat[common.rownames,]
 Taxonomy <- taxonomy[common.rownames,]
-##check that all rows match
-all.equal(rownames(Data),rownames(Taxonomy))
+##Check that all rows match
+all.equal(rownames(dat),rownames(Taxonomy))
 #Merge Taxonomy and Data
-Primer <- merge(Data, Taxonomy, by = 0)  
+Primer <- merge(dat, Taxonomy, by = 0)  
 #Export as csv
 write.csv(Primer, "Primer.csv")
 ####Merge Metadata in New Primer File using Excel (transpose metadata file and sort both files by column name)
@@ -236,20 +220,20 @@ write.csv(Primer, "Primer.csv")
 ###################ANALYSIS
 
 ###Look at Raw Data Stats
-#Import Data: before loading make sure .tsv does not have Words/phrases above ASV ID row, remove # from ASV
-dat <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
-#flip columns to rows
-t.dat <- as.data.frame(t(dat))
-#set t.dat as dat
-dat <- t.dat
+#Import Data: before loading make sure .tsv does not have words/phrases above ASV ID row, remove # from ASV
+dat_raw <- read.delim("~/Grad School/Thesis/Data/feature-table_2021.tsv", row.names=1)
+#Flip columns to rows
+t.dat_raw <- as.data.frame(t(dat_raw))
+#Set t.dat as dat
+dat_raw <- t.dat_raw
 #Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
 #Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Contamination_Metadata.txt", row.names=1)
+metadata = read.delim("~/Grad School/Thesis/Data/Contamination_Metadata.txt", row.names=1)
 #Load in QIIME tree
-phy_tree=qza_to_phyloseq(tree="rooted-tree.qza")
+phy_tree = qza_to_phyloseq(tree="rooted-tree.qza")
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
-ASV.UF = otu_table(as.matrix(dat), taxa_are_rows=FALSE)
+ASV.UF = otu_table(as.matrix(dat_raw), taxa_are_rows=FALSE)
 tax.UF = tax_table(as.matrix(taxonomy))
 meta.UF = sample_data(metadata)
 #Check ASV name consistency
@@ -280,26 +264,26 @@ physeq
 
 ###Look at Conservative Clean Data Stats
 #Import Data
-data <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq01.txt", row.names=1)
-#flip columns to rows
-t.dat <- as.data.frame(t(data))
-#set t.dat as dat
+dat <- read.delim("~/Grad School/Thesis/Data/NonContaminated_Freq01.txt", row.names=1)
+#Flip columns to rows
+t.dat <- as.data.frame(t(dat))
+#Set t.dat as dat
 dat <- t.dat
-##remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
+###Remove ASVs that occur <0.001 ---> increases the number of ASVs - includes more "microdiversity" 
 dat.pa<-decostand(dat, method ="pa") 
 dat.otus.001per<-which(colSums(dat.pa) > (0.001*nrow(dat.pa)))
 dat.001per<-dat[,dat.otus.001per]
 #16,516 taxa
 
-#Convert to Relative Abundance and standardize by sample total
+#Convert to relative abundance and standardize by sample total
 dat.ra<-decostand(dat.001per, method = "total")
 
 #Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
 #Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
+metadata = read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 #Load in QIIME tree
-phy_tree=qza_to_phyloseq(tree="rooted-tree.qza")
+phy_tree = qza_to_phyloseq(tree="rooted-tree.qza")
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
 ASV.UF = otu_table(as.matrix(dat.001per), taxa_are_rows=FALSE)
 tax.UF = tax_table(as.matrix(taxonomy))
@@ -330,7 +314,7 @@ physeq_clean
 ##16516 taxa and 243 samples
 
 
-##########Alpha Diversity VEGAN
+##########Alpha Diversity - vegan package
 ###Diversity by Sample
 #Species Richness:
 S <- specnumber(dat.001per)
@@ -380,9 +364,6 @@ diversity.by.sampletype <- cbind(S, N, d, H, J, D, inv.D)
 #Save the file
 write.csv(diversity.by.sampletype, "diversity.by.sampletype.csv")
 
-#Combine data together into a single new dataframe, export as CSV
-diversity.by.sample <- cbind(S, N, d, H, J, D, inv.D)
-write.csv(diversity.by.sample, "diversity.by.sample.csv")
 
 ###Diversity by Species 
 ########CC
@@ -752,6 +733,39 @@ ggplot(AlphaDiversity_Beaches) +
   theme(axis.text=element_text(size=14), axis.title=element_text(size=16)) +
   scale_fill_manual(values=beaches.colors)
 
+
+#############Final Alpha Diversity Plot (Figure 1)
+###Create file with alpha diversity separated by sample and include two columns identifying beach and turtle species
+AlphaDiversity_AllSplit <- read.delim("~/Grad School/Thesis/Data/AlphaDiversity_AllSplit.txt", row.names=1)
+
+#ALL SAMPLES
+ggplot(AlphaDiversity_AllSplit) +
+  geom_boxplot(aes(x = Group, y = S, fill = Group)) + ylab("Total Species (S)") + xlab("") + 
+  theme(axis.text=element_text(size=14), axis.title=element_text(size=16)) +
+  scale_fill_grey(start=0.4, end=1.0) +
+  facet_grid(. ~ Sample.Type) +
+  theme(strip.text.x = element_text(size = 17))
+ggplot(AlphaDiversity_AllSplit) +
+  geom_boxplot(aes(x = Group, y = d, fill = Group)) + ylab("Margalef's Species Richness (d)") + xlab("") + 
+  theme(axis.text=element_text(size=14), axis.title=element_text(size=16)) +
+  scale_fill_grey(start=0.4, end=1.0) +
+  facet_grid(. ~ Sample.Type) +
+  theme(strip.text.x = element_text(size = 17))
+ggplot(AlphaDiversity_AllSplit) +
+  geom_boxplot(aes(x = Group, y = D, fill = Group)) + ylab("Inverse Simpson's Diversity") + xlab("") + 
+  theme(axis.text=element_text(size=14), axis.title=element_text(size=16)) +
+  scale_fill_grey(start=0.4, end=1.0) +
+  facet_grid(. ~ Sample.Type) +
+  theme(strip.text.x = element_text(size = 17))
+ggplot(AlphaDiversity_AllSplit) +
+  geom_boxplot(aes(x = Group, y = H, fill = Group)) + ylab("Shannon Diversity") + xlab("") + 
+  theme(axis.text=element_text(size=14), axis.title=element_text(size=16)) +
+  scale_fill_grey(start=0.4, end=1.0) +
+  facet_grid(. ~ Sample.Type) +
+  theme(strip.text.x = element_text(size = 17))
+
+
+
 ###ALL SAMPLES Statistical Significance
 #Shapiro Test = Normality
 shapiro.test(AlphaDiversity_ALL$S)
@@ -980,9 +994,209 @@ kruskal.test(AlphaDiversity_H$D ~ AlphaDiversity_H$Group)
 pairwise.wilcox.test(AlphaDiversity_H$D, AlphaDiversity_H$Group, p.adjust.method = "fdr")
 
 
-##########Alpha Diversity iNEXT (Hill Numbers)
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Calculate the overall totals for each species:
+
+#########GLMM Alpha Diversity
+#Create a new object for common rownames for hatched and unhatched egg data
+common.rownames <- intersect(rownames(AlphaDiversity_ALL),rownames(metadata))
+#Set the data file and metadata file to have only the data that includes these common names 
+AD <- AlphaDiversity_ALL[common.rownames,]
+metadata <- metadata[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(AD), rownames(metadata), ignore.row.order = TRUE)
+#Create one file with alpha diversity metric and metadata
+glmmdata_ALL = merge(AD, metadata, by=0)
+
+###Look for covariation among metadata
+Turtle_Metadata_2021_simplified <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021_simplified.txt", row.names=1)
+metadata_covar = subset(Turtle_Metadata_2021_simplified, select = -c(Beach, Species, R.Zone, Recent.Renourishment, Turtle.ID, Nesting.Date, Excavation.Date, LIN, LPIP, DIN, DPIP, Whole, Hatched, Roots, Washover, Relocated, Predated, Temperature.Average, pH.Average, Conductivity.Average))
+#Run correlation
+cor(metadata_covar)
+###Look for correlations above out of the -0.6 to 0.6 range (strong correlation) for removal
+# pH.side - pH.Bottom = 0.86836426
+# Temperature.Side - Temperature.Bottom = 0.87331573
+# Latitude-Longitude = 0.99557176
+# Dune.Distance-Latitude = -0.79102842
+# Dune.Distance-Longitude = -0.75737137
+
+############Margalef's Species Richness
+###Create full model
+mod.1 = lmer(d ~ Incubation.Length + Clutch.Size + Hatch.Success + 
+                Chamber.Depth + High.Tide.Distance + Dune.Distance + 
+                Temperature.Bottom + pH.Bottom + 
+                Conductivity.Side + Conductivity.Bottom + 
+                Sand.Grain.Size + Sorting.Coefficient + 
+                Sample.Type*Species + Sample.Type*Beach +
+                (1|Nest.Number), data = glmmdata_ALL)
+
+summary(mod.1)
+drop1(mod.1)
+#                           AIC
+# <none>                   1934.7
+# Incubation.Length      1 1939.4
+# Clutch.Size            1 1932.9
+# Hatch.Success          1 1936.4
+# Chamber.Depth          1 1936.8
+# High.Tide.Distance     1 1938.7
+# Dune.Distance          1 1935.1
+# Temperature.Bottom     1 1942.9
+# pH.Bottom              1 1932.8
+# Conductivity.Side      1 1934.9
+# Conductivity.Bottom    1 1936.1
+# Sand.Grain.Size        1 1932.8
+# Sorting.Coefficient    1 1933.4
+# Sample.Type:Species    4 2032.1
+# Sample.Type:Beach      4 1998.8
+
+#Remove terms
+#Keep terms with AIC scores that increase by 2 compared to the <none>
+mod.2 = lmer(d ~ Incubation.Length + High.Tide.Distance + Temperature.Bottom +  
+               Sample.Type*Species + Sample.Type*Beach +
+               (1|Nest.Number), data = glmmdata_ALL)
+summary(mod.2)
+report(mod.2)
+
+#Validate Model (mean should be roughly at zero)
+plot(mod.2)
+plot(residuals(mod.2)~fitted(mod.2))
+plot(residuals(mod.2)~ glmmdata_ALL$Incubation.Length)
+plot(residuals(mod.2)~ glmmdata_ALL$High.Tide.Distance)
+plot(residuals(mod.2)~ glmmdata_ALL$Temperature.Bottom)
+plot(residuals(mod.2)~factor(glmmdata_ALL$Beach))
+plot(residuals(mod.2)~factor(glmmdata_ALL$Species))
+plot(residuals(mod.2)~factor(glmmdata_ALL$Sample.Type))
+plot(predict(mod.2, type = 'response')~ glmmdata_ALL$d)
+
+#Pairwise
+pw.tests_1 <- pairs(emmeans(mod.2, ~ Sample.Type, by=c("Species")))
+pw.tests_1
+pw.tests_2 <- pairs(emmeans(mod.2, ~ Sample.Type, by=c("Species","Beach")))
+pw.tests_2
+pw.tests_3 <- pairs(emmeans(mod.2, ~ Species, by=c("Sample.Type")))
+pw.tests_3
+pw.tests_4 <- pairs(emmeans(mod.2, ~ Beach, by=c("Sample.Type", "Species")))
+pw.tests_4
+
+
+
+############Shannon Diversity
+###Create full model
+mod.1 = lmer(H ~ Incubation.Length + Clutch.Size + Hatch.Success + 
+               Chamber.Depth + High.Tide.Distance + Dune.Distance + 
+               Temperature.Bottom + pH.Bottom + 
+               Conductivity.Side + Conductivity.Bottom + 
+               Sand.Grain.Size + Sorting.Coefficient + 
+               Sample.Type*Species + Sample.Type*Beach +
+               (1|Nest.Number), data = glmmdata_ALL)
+
+summary(mod.1)
+drop1(mod.1)
+#                           AIC
+# <none>                   480.56
+# Incubation.Length      1 478.78
+# Clutch.Size            1 489.44
+# Hatch.Success          1 478.66
+# Chamber.Depth          1 479.90
+# High.Tide.Distance     1 483.15
+# Dune.Distance          1 479.43
+# Temperature.Bottom     1 485.16
+# pH.Bottom              1 480.33
+# Conductivity.Side      1 480.36
+# Conductivity.Bottom    1 479.52
+# Sand.Grain.Size        1 478.62
+# Sorting.Coefficient    1 478.57
+# Sample.Type:Species    4 556.93
+# Sample.Type:Beach      4 508.37
+
+#Remove terms
+#Keep terms with AIC scores that increase by 2 compared to the <none>
+mod.2 = lmer(H ~ Clutch.Size + High.Tide.Distance + Temperature.Bottom +
+               Sample.Type*Species + Sample.Type*Beach +
+               (1|Nest.Number), data = glmmdata_ALL)
+summary(mod.2)
+report(mod.2)
+
+#Validate Model (mean should be roughly at zero)
+plot(mod.2)
+plot(residuals(mod.2)~fitted(mod.2))
+plot(residuals(mod.2)~ glmmdata_ALL$Clutch.Size)
+plot(residuals(mod.2)~ glmmdata_ALL$High.Tide.Distance)
+plot(residuals(mod.2)~ glmmdata_ALL$Temperature.Bottom)
+plot(residuals(mod.2)~factor(glmmdata_ALL$Beach))
+plot(residuals(mod.2)~factor(glmmdata_ALL$Species))
+plot(residuals(mod.2)~factor(glmmdata_ALL$Sample.Type))
+plot(predict(mod.2, type = 'response')~ glmmdata_ALL$H)
+
+#Pairwise
+pw.tests_1 <- pairs(emmeans(mod.2, ~ Sample.Type, by=c("Species")))
+pw.tests_1
+pw.tests_2 <- pairs(emmeans(mod.2, ~ Sample.Type, by=c("Species","Beach")))
+pw.tests_2
+pw.tests_3 <- pairs(emmeans(mod.2, ~ Species, by=c("Sample.Type")))
+pw.tests_3
+pw.tests_4 <- pairs(emmeans(mod.2, ~ Beach, by=c("Sample.Type", "Species")))
+pw.tests_4
+
+
+
+
+############Inverse Simpson Diversity
+###Create full model
+mod.1 = lmer(D ~ Incubation.Length + Clutch.Size + Hatch.Success + 
+               Chamber.Depth + High.Tide.Distance + Dune.Distance + 
+               Temperature.Bottom + pH.Bottom + 
+               Conductivity.Side + Conductivity.Bottom + 
+               Sand.Grain.Size + Sorting.Coefficient + 
+               Sample.Type*Species + Sample.Type*Beach +
+               (1|Nest.Number), data = glmmdata_ALL)
+
+summary(mod.1)
+drop1(mod.1)
+#                           AIC
+# <none>                   -387.90
+# Incubation.Length      1 -388.42
+# Clutch.Size            1 -377.85
+# Hatch.Success          1 -387.73
+# Chamber.Depth          1 -389.89
+# High.Tide.Distance     1 -388.95
+# Dune.Distance          1 -389.71
+# Temperature.Bottom     1 -389.13
+# pH.Bottom              1 -388.47
+# Conductivity.Side      1 -389.89
+# Conductivity.Bottom    1 -388.14
+# Sand.Grain.Size        1 -389.89
+# Sorting.Coefficient    1 -389.90
+# Sample.Type:Species    4 -381.31
+# Sample.Type:Beach      4 -392.88
+
+#Remove terms
+#Keep terms with AIC scores that increase by 2 compared to the <none>
+mod.2 = lmer(D ~ Sorting.Coefficient + Sample.Type*Beach + 
+               (1|Nest.Number), data = glmmdata_ALL)
+summary(mod.2)
+report(mod.2)
+
+#Validate Model (mean should be roughly at zero)
+plot(mod.2)
+plot(residuals(mod.2)~fitted(mod.2))
+plot(residuals(mod.2)~ glmmdata_ALL$Sorting.Coefficient)
+plot(residuals(mod.2)~factor(glmmdata_ALL$Beach))
+plot(residuals(mod.2)~factor(glmmdata_ALL$Sample.Type))
+plot(predict(mod.2, type = 'response')~ glmmdata_ALL$D)
+
+#Pairwise
+pw.tests_1 <- pairs(emmeans(mod.2, ~ Sample.Type, by=c("Beach")))
+pw.tests_1
+pw.tests_2 <- pairs(emmeans(mod.2, ~ Beach, by=c("Sample.Type")))
+pw.tests_2
+
+
+
+
+
+
+
+##########CREATE SEPARATED DATA FILES - by Turtle Species, Beach, Sample Types
+metadata = read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
 ##CC
 #Remove CM species
 metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
@@ -993,14 +1207,197 @@ dat_cc <- dat.001per[common.rownames,]
 metadata_cc <- metadata_cc[common.rownames,]
 #Make sure all the row names are the same (equal) following the code
 all.equal(rownames(dat_cc), rownames(metadata_cc), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_cc<-decostand(dat_cc, method = "total")
+
+##CM
+#Remove CC species
+metadata_cm <- droplevels(metadata[!metadata$Species == 'CC',])
+#Create a new object for common rownames for CM data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cm))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cm <- dat.001per[common.rownames,]
+metadata_cm <- metadata_cm[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cm), rownames(metadata_cm), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_cm<-decostand(dat_cm, method = "total")
+
+##FT
+#Remove H Beach
+metadata_FT <- droplevels(metadata_cc[!metadata_cc$Beach == 'Hillsboro',])
+#Create a new object for common rownames for CC data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_FT))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_FT <- dat.001per[common.rownames,]
+metadata_FT <- metadata_cc[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_FT), rownames(metadata_FT), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_FT<-decostand(dat_FT, method = "total")
+
+##H
+#Remove FT Beach
+metadata_H <- droplevels(metadata_cc[!metadata_cc$Beach == 'Fort Lauderdale',])
+#Create a new object for common rownames for CC data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_H))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_H <- dat.001per[common.rownames,]
+metadata_H <- metadata_cc[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_H), rownames(metadata_H), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_H<-decostand(dat_H, method = "total")
+
+##Cloaca
+#Separate both files by sample type
+metadata_cloaca <- metadata %>%
+  filter(Sample.Type =='Cloaca')
+#Create a new object for common rownames for data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cloaca))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cloaca <- dat.001per[common.rownames,]
+metadata_cloaca <- metadata_cloaca[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cloaca), rownames(metadata_cloaca), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_cloaca<-decostand(dat_cloaca, method = "total")
+
+##Hatched Eggs
+#Separate both files by sample type
+metadata_HatchedOnly <- metadata %>%
+  filter(Sample.Type =='Hatched Egg')
+#Create a new object for common rownames for data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HatchedOnly))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_HatchedOnly <- dat.001per[common.rownames,]
+metadata_HatchedOnly <- metadata_HatchedOnly[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_HatchedOnly), rownames(metadata_HatchedOnly), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_HatchedOnly<-decostand(dat_HatchedOnly, method = "total")
+
+##Unhatched Eggs
+#Separate both files by sample type
+metadata_UnhatchedOnly <- metadata %>%
+  filter(Sample.Type =='Unhatched Egg')
+#Create a new object for common rownames for data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_UnhatchedOnly))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_UnhatchedOnly <- dat.001per[common.rownames,]
+metadata_UnhatchedOnly <- metadata_UnhatchedOnly[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_UnhatchedOnly), rownames(metadata_UnhatchedOnly), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_UnhatchedOnly<-decostand(dat_UnhatchedOnly, method = "total")
+
+##Control Sand
+#Separate both files by sample type
+metadata_sand <- metadata_cc %>%
+  filter(Sample.Type =='Control Sand')
+#Create a new object for common rownames for data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_sand))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_sand <- dat.001per[common.rownames,]
+metadata_sand <- metadata_sand[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_sand), rownames(metadata_sand), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_sand<-decostand(dat_sand, method = "total")
+
+##Nest Sand
+#Separate both files by sample type
+metadata_nest <- metadata_cc %>%
+  filter(Sample.Type =='Nest Sand')
+#Create a new object for common rownames for data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_nest))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_nest <- dat.001per[common.rownames,]
+metadata_nest <- metadata_nest[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_nest), rownames(metadata_nest), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_nest<-decostand(dat_nest, method = "total")
+
+
+##Hatched and Unhatched Egg
+#Remove Cloaca, Nest, Control
+metadata_HU <- droplevels(metadata[!metadata$Sample.Type == c('Cloaca','Nest Sand','Control Sand'),])
+#Create a new object for common rownames for all HU
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_HU <- dat.001per[common.rownames,]
+metadata_HU <- metadata_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_HU), rownames(metadata_HU), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_HU<-decostand(dat_HU, method = "total")
+
+##CC_HU
+#Remove CM species
+metadata_cc_HU <- droplevels(metadata_HU[!metadata_HU$Species == 'CM',])
+#Create a new object for common rownames for CC data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cc_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cc_HU <- dat.001per[common.rownames,]
+metadata_cc_HU <- metadata_cc_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cc_HU), rownames(metadata_cc_HU), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_cc_HU<-decostand(dat_cc_HU, method = "total")
+
+##CM_HU
+#Remove CC species
+metadata_cm_HU <- droplevels(metadata_HU[!metadata_HU$Species == 'CC',])
+#Create a new object for common rownames for CM data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cm_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cm_HU <- dat.001per[common.rownames,]
+metadata_cm_HU <- metadata_cm_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cm_HU), rownames(metadata_cm_HU), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_cm_HU<-decostand(dat_cm_HU, method = "total")
+
+##FT_HU
+#Remove Hillsboro Beach
+metadata_F_HU <- droplevels(metadata_cc_HU[!metadata_cc_HU$Beach == 'Hillsboro',])
+#Create a new object for common rownames for FT data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_F_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_F_HU <- dat.001per[common.rownames,]
+metadata_F_HU <- metadata_F_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_F_HU), rownames(metadata_F_HU), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_F_HU<-decostand(dat_F_HU, method = "total")
+
+##H_HU
+#Remove Fort Lauderdale Beach
+metadata_H_HU <- droplevels(metadata_cc_HU[!metadata_cc_HU$Beach == 'Fort Lauderdale',])
+#Create a new object for common rownames for Hillsboro data
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_H_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_H_HU <- dat.001per[common.rownames,]
+metadata_H_HU <- metadata_H_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_H_HU), rownames(metadata_H_HU), ignore.row.order = TRUE)
+#Convert to relative abundance
+dat.ra_H_HU<-decostand(dat_H_HU, method = "total")
+
+
+
+
+
+##########Alpha Diversity iNEXT (Hill Numbers)
+#Calculate the overall totals for each species:
+##CC
 #Sum data
 CC.totals <- colSums(dat_cc)
 #Make a matrix for CC data as type "integer"
 mCC <- as.matrix(CC.totals)
 class(mCC)
-
-
-#####Make with Separated Sample Type
+##Separate Sample Type for CC
 #Merge Sample Types
 MergedData <- merge(metadata_cc[1], dat_cc, by=0, all=T)
 #Fix row names
@@ -1016,21 +1413,11 @@ mCC_ST <- as.matrix(t(CCSumSampleType.Label))
 
 
 ##CM
-#Remove CC species
-metadata_cm <- droplevels(metadata[!metadata$Species == 'CC',])
-#Create a new object for common rownames for CM data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cm))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cm <- dat.001per[common.rownames,]
-metadata_cm <- metadata_cm[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cm), rownames(metadata_cm), ignore.row.order = TRUE)
 #Sum data
 CM.totals <- colSums(dat_cm)
 #Make a matrix for CC data as type "integer"
 mCM <- as.matrix(CM.totals)
-
-#####Make with Separated Sample Type
+##Separate Sample Type for CM
 #Merge Sample Types
 MergedData <- merge(metadata_cm[1], dat_cm, by=0, all=T)
 #Fix row names
@@ -1044,7 +1431,7 @@ rownames(CMSumSampleType.Label) <- CMSumSampleType[,1]
 #Transpose matrix (ASV = rows)
 mCM_ST <- as.matrix(t(CMSumSampleType.Label))
 
-###Overall CC vs CM
+##Overall CC vs CM
 #Make a combined matrix list
 CC_CM_matrix<-list(mCC,mCM)
 #Compute diversity estimates of order q
@@ -1062,7 +1449,7 @@ ggiNEXT(hill.estimates, type=3, facet.var="order", color.var="site") +
   facet_wrap(~order, scales="free") 
 
 
-###CC by Sample Type
+##CC by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.CC <- iNEXT(mCC_ST, q=c(0,2), datatype="abundance", nboot=100)
 ## Examine the results
@@ -1077,7 +1464,7 @@ ggiNEXT(hill.estimates.ST.CC, type=2, facet.var="none", color.var="site")
 ggiNEXT(hill.estimates.ST.CC, type=3, facet.var="order", color.var="site") + 
   facet_wrap(~order, scales="free") 
 
-###CM by Sample Type
+##CM by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.CM <- iNEXT(mCM_ST, q=c(0,2), datatype="abundance", nboot=100)
 ## Examine the results
@@ -1094,17 +1481,6 @@ ggiNEXT(hill.estimates.ST.CM, type=3, facet.var="order", color.var="site") +
 
 
 ##FT
-#Remove CM species
-metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
-#Remove H Beach
-metadata_FT <- droplevels(metadata_cc[!metadata_cc$Beach == 'Hillsboro',])
-#Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_FT))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_FT <- dat.001per[common.rownames,]
-metadata_FT <- metadata_cc[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_FT), rownames(metadata_FT), ignore.row.order = TRUE)
 #Sum data (for overall comparison)
 FT.totals <- colSums(dat_FT)
 #Make a matrix for CC data as type "integer"
@@ -1124,17 +1500,6 @@ mFT_ST <- as.matrix(t(FTSumSampleType.Label))
 
 
 ##H
-#Remove CM species
-metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
-#Remove H Beach
-metadata_H <- droplevels(metadata_cc[!metadata_cc$Beach == 'Fort Lauderdale',])
-#Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_H))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_H <- dat.001per[common.rownames,]
-metadata_H <- metadata_cc[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_H), rownames(metadata_H), ignore.row.order = TRUE)
 #Sum data (for overall comparison)
 H.totals <- colSums(dat_H)
 #Make a matrix for CC data as type "integer"
@@ -1152,7 +1517,7 @@ rownames(HSumSampleType.Label) <- HSumSampleType[,1]
 #Transpose matrix (ASV = rows)
 mH_ST <- as.matrix(t(HSumSampleType.Label))
 
-###Overall FT vs H
+##Overall FT vs H
 #Make a combined matrix list
 FT_H_matrix <- merge(mFT, mH, by=0, all=T)
 #Fix row names
@@ -1177,7 +1542,7 @@ ggiNEXT(hill.estimates, type=3, facet.var="order", color.var="site") +
   facet_wrap(~order, scales="free") 
 
 
-###Fort Lauderdale by Sample Type
+##Fort Lauderdale by Sample Type
 #Compute diversity estimates of order q
 hill.estimates.ST.FT <- iNEXT(mFT_ST, q=c(0,2), datatype="abundance", nboot=100)
 ## Examine the results
@@ -1209,7 +1574,7 @@ ggiNEXT(hill.estimates.ST.H, type=3, facet.var="order", color.var="site") +
 
 
 
-##########Alpha Diversity Phyloseq
+##########Alpha Diversity - phyloseq package
 #Estimate richness
 rich = estimate_richness(physeq_clean)
 rich
@@ -1243,6 +1608,7 @@ p + geom_boxplot(data=p$data, aes(x = Sample.Type, color = NULL), alpha = 0.1)
 
 
 ########Beta Diversity
+##Overall
 #ANOSIM - tests whether distances between groups are greater than within groups.
 ano = anosim(dat.ra, metadata$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano
@@ -1267,21 +1633,20 @@ pairwise.perm.manova(dat.ra,metadata$Sample.Type, nperm=9999)
 
 
 #Create NMDS chart 
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 comm.bc.mds<-metaMDS(dat.ra, distance="bray",trace=FALSE, autotransform=FALSE, k=2, trymax=100)
 comm.bc.mds
-#stress = 0.1725899
+##Stress = 0.1725899
 stressplot(comm.bc.mds)
-
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 mds.fig<-ordiplot(comm.bc.mds, display="sites")
 ordiellipse(mds.fig, metadata$Sample.Type, label = F, conf = 0.95, col = c("green4","red"))
-##adjust colors, pch=20 make it bullet points
+#Adjust colors, pch=20 make it bullet points
 points(mds.fig,"sites", pch=19, col= "red", select = metadata$Sample.Type == "Hatched Egg")
 points(mds.fig,"sites", pch=19, col= "cyan", select = metadata$Sample.Type == "Unhatched Egg")
 points(mds.fig,"sites", pch=19, col= "blue4", select = metadata$Sample.Type == "Cloaca")
 points(mds.fig,"sites", pch=19, col= "green", select = metadata$Sample.Type == "Nest Sand")
 points(mds.fig,"sites", pch=19, col= "pink", select = metadata$Sample.Type == "Control Sand")
-
 #Add Stress Value
 text(7,4, "Stress = 0.17", cex=0.6)
 #Add legend
@@ -1290,13 +1655,11 @@ legend("bottomright",legend= c("Hatched","Unhatched", "Cloaca", "Nest Sand", "Co
        col=c("red","cyan", "blue4", "green", "pink"), 
        pch=19, cex=0.55)
 ##Saved as "NMDS_SampleType"
+#####Prefer PRIMER-e for NMDS plot generation
 
 
 
-
-
-
-##########SAMPLE TYPE BY SPECIES COMPARISON
+##########SAMPLE TYPE BY TURTLE SPECIES COMPARISON
 #Two-Way ANOSIM
 SampleType.Species.test <- anosim(dat.ra, metadata$Sample.Type, strata = metadata$Species,
                            permutations = 9999)
@@ -1312,37 +1675,7 @@ Species.SampleType.test
 #ANOSIM statistic R: 0.2641 
 #Significance: 0.001 
 
-
-###Look at each species individually
-##Remove unwanted samples from metadata
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Remove CM species
-metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
-#Remove CC species
-metadata_cm <- droplevels(metadata[!metadata$Species == 'CC',])
-
-#Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cc))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cc <- dat.001per[common.rownames,]
-metadata_cc <- metadata_cc[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cc), rownames(metadata_cc), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_cc<-decostand(dat_cc, method = "total")
-
-#Create a new object for common rownames for CM data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cm))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cm <- dat.001per[common.rownames,]
-metadata_cm <- metadata_cm[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cm), rownames(metadata_cm), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_cm<-decostand(dat_cm, method = "total")
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_cc = anosim(dat.ra_cc, metadata_cc$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_cc
 #ANOSIM statistic R: 0.4925  
@@ -1353,7 +1686,7 @@ ano_cm
 #ANOSIM statistic R: 0.1536 
 #Significance: 0.0061 
 
-##Adonis - Analysis of variance using distance matrices
+#Adonis - Analysis of variance using distance matrices
 adonis(dat.ra_cc~Sample.Type, data = metadata_cc, permutations = 9999, method = "bray")
 #R2= 0.19036, P-value= 0.001
 #19.04% of the sums of squares can be explained by "Sample.Type"
@@ -1364,7 +1697,7 @@ adonis(dat.ra_cm~Sample.Type, data = metadata_cm, permutations = 9999, method = 
 #27.33% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-##PerMANOVA to see what sites have the differences
+#PerMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.ra_cc,metadata_cc$Sample.Type, nperm=9999)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1386,23 +1719,7 @@ pairwise.perm.manova(dat.ra_cm,metadata_cm$Sample.Type, nperm=9999)
 
 
 ############Cloaca Comparison
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Remove Cloaca, Nest, Control
-metadata_cloaca <- droplevels(metadata[!metadata$Sample.Type == 'Hatched Egg',])
-metadata_cloaca <- droplevels(metadata_cloaca[!metadata_cloaca$Sample.Type == 'Unhatched Egg',])
-metadata_cloaca <- droplevels(metadata_cloaca[!metadata_cloaca$Sample.Type == 'Nest Sand',])
-metadata_cloaca <- droplevels(metadata_cloaca[!metadata_cloaca$Sample.Type == 'Control Sand',])
-
-#Create a new object for common rownames for data
-common.rownames <- intersect(rownames(dat.ra),rownames(metadata_cloaca))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cloaca <- dat.ra[common.rownames,]
-metadata_cloaca <- metadata_cloaca[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cloaca), rownames(metadata_cloaca), ignore.row.order = TRUE)
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_cloaca = anosim(dat_cloaca, metadata_cloaca$Species, permutations = 9999, distance = "bray", strata = NULL)
 ano_cloaca
 #ANOSIM statistic R: 0.5613 
@@ -1428,8 +1745,6 @@ sink()
 
 
 
-
-
 ##########SAMPLE TYPE BY BEACH COMPARISON
 #Two-Way ANOSIM
 SampleType.Beach.test <- anosim(dat.ra_cc, metadata_cc$Sample.Type, strata = metadata_cc$Beach,
@@ -1446,60 +1761,29 @@ Beach.SampleType.test
 #ANOSIM statistic R: 0.09194 
 #Significance: 1e-04
 
-##Remove unwanted samples from metadata
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Remove CM Data
-metadata_cc <- droplevels(metadata[!metadata$Species == 'CM',])
-#Remove Hillsboro Beach
-metadata_F <- droplevels(metadata_cc[!metadata_cc$Beach == 'Hillsboro',])
-#Remove Fort Lauderdale Beach
-metadata_H <- droplevels(metadata_cc[!metadata_cc$Beach == 'Fort Lauderdale',])
-
-#Create a new object for common rownames for Hillsboro data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_H))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_H <- dat.001per[common.rownames,]
-metadata_H <- metadata_H[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_H), rownames(metadata_H), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_H<-decostand(dat_H, method = "total")
-
-#Create a new object for common rownames for Fort Lauderdale data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_F))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_F <- dat.001per[common.rownames,]
-metadata_F <- metadata_F[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_F), rownames(metadata_F), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_F<-decostand(dat_F, method = "total")
-
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_H = anosim(dat.ra_H, metadata_H$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_H
 #ANOSIM statistic R: 0.6586 
 #Significance: 1e-04 
 
-ano_F = anosim(dat.ra_F, metadata_F$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
+ano_F = anosim(dat.ra_FT, metadata_FT$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_F
 #ANOSIM statistic R: 0.3385 
 #Significance: 1e-04 
 
-##Adonis - Analysis of variance using distance matrices
+#Adonis - Analysis of variance using distance matrices
 adonis(dat.ra_H~Sample.Type, data = metadata_H, permutations = 9999, method = "bray")
 #R2= 0.25184, P-value= 0.001
 #25.18% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-adonis(dat.ra_F~Sample.Type, data = metadata_F, permutations = 9999, method = "bray")
+adonis(dat.ra_FT~Sample.Type, data = metadata_FT, permutations = 9999, method = "bray")
 #R2= 0.20363, P-value= 0.001
 #20.36% of the sums of squares can be explained by "Sample.Type"
 #Significant
 
-##PerMANOVA to see what sites have the differences
+#PerMANOVA to see what sites have the differences
 pairwise.perm.manova(dat.ra_H,metadata_H$Sample.Type, nperm=9999)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
@@ -1509,7 +1793,7 @@ pairwise.perm.manova(dat.ra_H,metadata_H$Sample.Type, nperm=9999)
 # Nest Sand     0.001  0.001        0.001       -        
 # Unhatched Egg 0.001  0.001        0.001       0.001   
 
-pairwise.perm.manova(dat.ra_F,metadata_F$Sample.Type, nperm=9999)
+pairwise.perm.manova(dat.ra_FT,metadata_FT$Sample.Type, nperm=9999)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons show significant differences
 #               Cloaca Control Sand Hatched Egg Nest Sand
@@ -1521,28 +1805,8 @@ pairwise.perm.manova(dat.ra_F,metadata_F$Sample.Type, nperm=9999)
 
 
 
-############Sand Comparsion
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Remove Cloaca, Nest, Eggs
-metadata_sand <- droplevels(metadata[!metadata$Sample.Type == 'Hatched Egg',])
-metadata_sand <- droplevels(metadata_sand[!metadata_sand$Sample.Type == 'Unhatched Egg',])
-metadata_sand <- droplevels(metadata_sand[!metadata_sand$Sample.Type == 'Nest Sand',])
-metadata_sand <- droplevels(metadata_sand[!metadata_sand$Sample.Type == 'Cloaca',])
-#Remove CM samples
-metadata_sand <- droplevels(metadata_sand[!metadata_sand$Species == 'CM',])
-
-#Create a new object for common rownames for data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_sand))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_sand <- dat.001per[common.rownames,]
-metadata_sand <- metadata_sand[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_sand), rownames(metadata_sand), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_sand<-decostand(dat_sand, method = "total")
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+############Control Sand Comparsion
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_sand = anosim(dat.ra_sand, metadata_sand$Beach, permutations = 9999, distance = "bray", strata = NULL)
 ano_sand
 #ANOSIM statistic R: 0.2738 
@@ -1557,34 +1821,17 @@ sink()
 #Closes output
 
 
-#Remove Cloaca, Control, Eggs
-metadata_N <- droplevels(metadata[!metadata$Sample.Type == 'Hatched Egg',])
-metadata_N <- droplevels(metadata_N[!metadata_N$Sample.Type == 'Unhatched Egg',])
-metadata_N <- droplevels(metadata_N[!metadata_N$Sample.Type == 'Control Sand',])
-metadata_N <- droplevels(metadata_N[!metadata_N$Sample.Type == 'Cloaca',])
-#Remove CM samples
-metadata_N <- droplevels(metadata_N[!metadata_N$Species == 'CM',])
-
-#Create a new object for common rownames for data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_N))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_N <- dat.001per[common.rownames,]
-metadata_N <- metadata_N[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_N), rownames(metadata_N), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_N<-decostand(dat_N, method = "total")
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
-ano_N = anosim(dat.ra_N, metadata_N$Beach, permutations = 9999, distance = "bray", strata = NULL)
-ano_N
+############Nest Sand Comparsion
+#ANOSIM - tests whether distances between groups are greater than within groups.
+ano_nest = anosim(dat.ra_nest, metadata_nest$Beach, permutations = 9999, distance = "bray", strata = NULL)
+ano_nest
 #ANOSIM statistic R: 0.158
 #Significance: 0.0287
 
-###Nest Distances Correlation
+##Nest Distances Correlation
 #Create distance matrices
 dat.bc.dist_sand<-vegdist(dat.ra_sand, method = "bray")
-dat.bc.dist_nest<-vegdist(dat.ra_N, method = "bray")
+dat.bc.dist_nest<-vegdist(dat.ra_nest, method = "bray")
 ##Export and create data matrices in Excel
 Sand_micro_dist <- read.delim("~/Grad School/Thesis/Data/Sand_micro_dist.txt", row.names=1)
 Nest_micro_dist <- read.delim("~/Grad School/Thesis/Data/Nest_micro_dist.txt", row.names=1)
@@ -1596,29 +1843,13 @@ mantel(Nest_micro_dist, Nest.Distances_CC, permutations = 9999)
 
 
 ###########HATCHED VS UNHATCHED EGG COMPARISON ALL
-##Remove unwanted samples from metadata
-#Import metadata for cleaning
-metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021.txt", row.names=1)
-#Remove Cloaca, Nest, Control
-metadata_HU <- droplevels(metadata[!metadata$Sample.Type == c('Cloaca','Nest Sand','Control Sand'),])
-
-#Create a new object for common rownames for data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HU))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_HU <- dat.001per[common.rownames,]
-metadata_HU <- metadata_HU[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_HU), rownames(metadata_HU), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_HU<-decostand(dat_HU, method = "total")
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_HU = anosim(dat.ra_HU, metadata_HU$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_HU
 #ANOSIM statistic R: 0.247  
 #Significance: 1e-04 
 
-##Adonis - Analysis of variance using distance matrices
+#Adonis - Analysis of variance using distance matrices
 adonis(dat.ra_HU~Sample.Type, data = metadata_HU, permutations = 9999, method = "bray")
 #R2= 0.07794, P-value= 0.001
 #7.794% of the sums of squares can be explained by "Sample.Type"
@@ -1638,7 +1869,7 @@ summary(dat.simp)
 sink()
 #Closes output
 
-###PERMDISP - see vairance within groups
+#PERMDISP - see vairance within groups
 dat.bc.dist<-vegdist(dat.ra_HU, method = "bray")
 #Calculate multivariate dispersions
 mod_all<- betadisper(dat.bc.dist, metadata_HU$Sample.Type)
@@ -1655,42 +1886,14 @@ plot(mod.all.HSD)
 pstat_all <- permustats(pmod_all)
 densityplot(pstat_all, scales = list(x = list(relation = "free")))
 qqmath(pstat_all, scales = list(relation = "free"))
-
+#Plot
 boxplot(mod_all)
 
 
 
 
 ###########HATCHED VS UNHATCHED EGG COMPARISON BY SPECIES
-#Remove Cloaca, Nest, Control
-metadata_HU <- droplevels(metadata[!metadata$Sample.Type == c('Cloaca','Nest Sand','Control Sand'),])
-#Remove CM species
-metadata_cc_HU <- droplevels(metadata_HU[!metadata_HU$Species == 'CM',])
-#Remove CC species
-metadata_cm_HU <- droplevels(metadata_HU[!metadata_HU$Species == 'CC',])
-
-#Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cc_HU))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cc_HU <- dat.001per[common.rownames,]
-metadata_cc_HU <- metadata_cc_HU[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cc_HU), rownames(metadata_cc_HU), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_cc_HU<-decostand(dat_cc_HU, method = "total")
-
-#Create a new object for common rownames for CM data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_cm_HU))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_cm_HU <- dat.001per[common.rownames,]
-metadata_cm_HU <- metadata_cm_HU[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_cm_HU), rownames(metadata_cm_HU), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_cm_HU<-decostand(dat_cm_HU, method = "total")
-
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_cc_HU = anosim(dat.ra_cc_HU, metadata_cc_HU$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_cc_HU
 #ANOSIM statistic R: 0.3449   
@@ -1717,7 +1920,7 @@ sink()
 #Closes output
 
 
-###PERMDISP - see vairance within groups
+#PERMDISP - see vairance within groups
 dat.bc.dist_cc<-vegdist(dat.ra_cc_HU, method = "bray")
 dat.bc.dist_cm<-vegdist(dat.ra_cm_HU, method = "bray")
 #Calculate multivariate dispersions
@@ -1745,39 +1948,16 @@ qqmath(pstat_cc, scales = list(relation = "free"))
 pstat_cm <- permustats(pmod_cm)
 densityplot(pstat_cm, scales = list(x = list(relation = "free")))
 qqmath(pstat_cm, scales = list(relation = "free"))
-
+#Plot
 boxplot(mod_cc)
 boxplot(mod_cm)
 
 
+
+
+
 ###########HATCHED VS UNHATCHED EGG COMPARISON BY BEACH (only CC)
-#Remove Hillsboro Beach
-metadata_F_HU <- droplevels(metadata_cc_HU[!metadata_cc_HU$Beach == 'Hillsboro',])
-#Remove Fort Lauderdale Beach
-metadata_H_HU <- droplevels(metadata_cc_HU[!metadata_cc_HU$Beach == 'Fort Lauderdale',])
-
-#Create a new object for common rownames for FT data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_F_HU))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_F_HU <- dat.001per[common.rownames,]
-metadata_F_HU <- metadata_F_HU[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_F_HU), rownames(metadata_F_HU), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_F_HU<-decostand(dat_F_HU, method = "total")
-
-#Create a new object for common rownames for Hillsboro data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_H_HU))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_H_HU <- dat.001per[common.rownames,]
-metadata_H_HU <- metadata_H_HU[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_H_HU), rownames(metadata_H_HU), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_H_HU<-decostand(dat_H_HU, method = "total")
-
-
-##ANOSIM - tests whether distances between groups are greater than within groups.
+#ANOSIM - tests whether distances between groups are greater than within groups.
 ano_F_HU = anosim(dat.ra_F_HU, metadata_F_HU$Sample.Type, permutations = 9999, distance = "bray", strata = NULL)
 ano_F_HU
 #ANOSIM statistic R: 0.2617
@@ -1806,7 +1986,7 @@ sink()
 
 
 
-##########ENVIRONMENTAL DATA
+##########ENVIRONMENTAL DATA CORRELATION
 ######ALL Hatched and Unhatched
 #Make sure all environmental factors are quantitative (change yes/no to 1/0)
 metadata_HU$Recent.Renourishment<-ifelse(metadata_HU$Recent.Renourishment=="Yes",1,0)
@@ -1836,7 +2016,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -1867,7 +2047,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -1909,7 +2089,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -1962,7 +2142,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -2017,7 +2197,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -2061,7 +2241,7 @@ vif.cca(mods.all)
 R2.adj.all<-RsquareAdj(mods.all)
 R2.adj.all
 mods.all$anova
-# Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
+#Add extra space to right of plot area; change clipping to figure; used to add legend to outside the plot area
 par(mar=c(5.1, 4.1, 4.1, 8.1), xpd=TRUE)
 #Plot CCA
 cca.p <- plot(mods.all,type = "none")
@@ -2164,29 +2344,18 @@ sig.test <- mantel(tested.dists, spp.dist, method = "spearman", permutations = 9
 sig.test
 
 
-###########HATCHED EGG COMPARISON
-#Remove Unhatched Eggs
-metadata_HatchOnly <- droplevels(metadata_HU[!metadata_HU$Sample.Type == 'Unhatched Egg',])
-#Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HatchOnly))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_HatchOnly <- dat.001per[common.rownames,]
-metadata_HatchOnly <- metadata_HatchOnly[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_HatchOnly), rownames(metadata_HatchOnly), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_HatchOnly<-decostand(dat_HatchOnly, method = "total")
 
+###########HATCHED EGG COMPARISON
 ###Species Comparison
 ##ANOSIM - Compare Species
-ano_Hatch_sp = anosim(dat.ra_HatchOnly, metadata_HatchOnly$Species, permutations = 9999, distance = "bray", strata = NULL)
+ano_Hatch_sp = anosim(dat.ra_HatchedOnly, metadata_HatchedOnly$Species, permutations = 9999, distance = "bray", strata = NULL)
 ano_Hatch_sp
 #ANOSIM statistic R: -0.1175  
 #Significance: 0.9788
 #####No differences between hatched eggs by Species
 
 #SIMPER to find potential indicators
-dat.simp<-simper(dat.ra_HatchOnly, metadata_HatchOnly$Species, permutations = 9999)
+dat.simp<-simper(dat.ra_HatchedOnly, metadata_HatchedOnly$Species, permutations = 9999)
 sink("Simper_HatchedEggs_Species.csv")
 #Creates csv of data in folder
 summary(dat.simp)
@@ -2195,16 +2364,16 @@ sink()
 
 ###Beach Comparison
 #Remove CM species
-metadata_HatchOnly_cc <- droplevels(metadata_HatchOnly[!metadata_HatchOnly$Species == 'CM',])
+metadata_HatchedOnly_cc <- droplevels(metadata_HatchedOnly[!metadata_HatchedOnly$Species == 'CM',])
 #Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HatchOnly_cc))
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_HatchedOnly_cc))
 #Set the data file and metadata file to have only the data that includes these common names 
-dat_HatchOnly_cc <- dat.001per[common.rownames,]
-metadata_HatchOnly_cc <- metadata_HatchOnly_cc[common.rownames,]
+dat_HatchedOnly_cc <- dat.001per[common.rownames,]
+metadata_HatchedOnly_cc <- metadata_HatchedOnly_cc[common.rownames,]
 #Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_HatchOnly_cc), rownames(metadata_HatchOnly_cc), ignore.row.order = TRUE)
+all.equal(rownames(dat_HatchedOnly_cc), rownames(metadata_HatchedOnly_cc), ignore.row.order = TRUE)
 #Convert to relative abundance
-dat.ra_HatchOnly_cc<-decostand(dat_HatchOnly_cc, method = "total")
+dat.ra_HatchedOnly_cc<-decostand(dat_HatchOnly_cc, method = "total")
 
 ##ANOSIM - Compare Beach
 ano_Hatch_beach = anosim(dat.ra_HatchOnly_cc, metadata_HatchOnly_cc$Beach, permutations = 9999, distance = "bray", strata = NULL)
@@ -2224,33 +2393,33 @@ sink()
 
 
 ###Nest Comparison
-ano_Hatch_nestnumber = anosim(dat.ra_HatchOnly, metadata_HatchOnly$Nest.Number, permutations = 9999, distance = "bray", strata = NULL)
+ano_Hatch_nestnumber = anosim(dat.ra_HatchedOnly, metadata_HatchedOnly$Nest.Number, permutations = 9999, distance = "bray", strata = NULL)
 ano_Hatch_nestnumber
 #ANOSIM statistic R: 0.5575 
 #Significance: 1e-04 
 
 #Adonis - Analysis of variance using distance matrices
-adonis(dat.ra_HatchOnly, data = metadata_HatchOnly, permutations = 9999, method = "bray")
+adonis(dat.ra_HatchedOnly, data = metadata_HatchedOnly, permutations = 9999, method = "bray")
 #R2= 0.12988, P-value= 0.001
 #12.99% of the sums of squares can be explained significantly by "Nest.Number"
 
 #PerMANOVA to see what sites have the differences
-pairwise.perm.manova(dat.ra_HatchOnly,metadata_HatchOnly$Nest.Number)
+pairwise.perm.manova(dat.ra_HatchedOnly,metadata_HatchedOnly$Nest.Number)
 #p-values greater then 0.05 then there is no significant difference between the sites
 #All comparisons showed no significant differences##PerMANOVA to see what sites have the differences
 
 #CCA, significance of the enivornmental factors on diversity 
-set.seed(55);env.cca<-cca(dat.ra_HatchOnly~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+R.Zone+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
+set.seed(55);env.cca<-cca(dat.ra_HatchedOnly~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+R.Zone+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
 vif.cca(env.cca)
 #If VIF higher than 20 remove factor with highest VIF (variance inflation factor)
 #Remove R Zone
-set.seed(55);env.cca<-cca(dat.ra_HatchOnly~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
+set.seed(55);env.cca<-cca(dat.ra_HatchedOnly~Latitude+Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
 vif.cca(env.cca)
 #Remove Latitude
-set.seed(55);env.cca<-cca(dat.ra_HatchOnly~Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
+set.seed(55);env.cca<-cca(dat.ra_HatchedOnly~Longitude+pH.Side+pH.Bottom+Temperature.Side+Temperature.Bottom+Conductivity.Side+Conductivity.Bottom+Sand.Grain.Size+Sorting.Coefficient+Incubation.Length+Clutch.Size+Hatch.Success+Chamber.Depth+High.Tide.Distance+Dune.Distance, data=metadata_HatchOnly)
 vif.cca(env.cca)
 #Zero the variables
-set.seed(55);lwr<- cca(dat.ra_HatchOnly~1, data=metadata_HatchOnly)
+set.seed(55);lwr<- cca(dat.ra_HatchedOnly~1, data=metadata_HatchOnly)
 lwr
 #Total Inertia = total variance in species (observdistributions
 #Unconstrained Inertia = the variance explained by the environmental variables
@@ -2263,44 +2432,32 @@ R2.adj.all
 mods.all$anova
 
 
-#BEST Analysis Hatch Only
-metadata_HatchOnly_bioenv <- subset(metadata_HatchOnly, select = c(8,9,12,13,20,21,23,24,28,29,31,32,34,35,37,38))
+#BEST Analysis Hatched Only
+metadata_HatchedOnly_bioenv <- subset(metadata_HatchedOnly, select = c(8,9,12,13,20,21,23,24,28,29,31,32,34,35,37,38))
 #Normalize metadata
-metadata_HatchOnly_bioenv.scaled <- scale(metadata_HatchOnly_bioenv)
+metadata_HatchedOnly_bioenv.scaled <- scale(metadata_HatchedOnly_bioenv)
 #Run Test
-best.test <- bioenv(dat.ra_HatchOnly, metadata_HatchOnly_bioenv.scaled, trace=TRUE, index = "bray", metric = "euclidean", method = "spearman")
+best.test <- bioenv(dat.ra_HatchedOnly, metadata_HatchedOnly_bioenv.scaled, trace=TRUE, index = "bray", metric = "euclidean", method = "spearman")
 best.test
 summary(best.test)
 #Mantel Test to estimate significance of best model
 tested.dists <- bioenvdist(best.test)
-spp.dist <- vegdist(dat.ra_HatchOnly, method = "bray")
+spp.dist <- vegdist(dat.ra_HatchedOnly, method = "bray")
 sig.test <- mantel(tested.dists, spp.dist, method = "spearman", permutations = 9999)
 sig.test
 
 
 ###########UNHATCHED EGG COMPARISON
-#Remove Hatched Eggs
-metadata_UnhatchOnly <- droplevels(metadata_HU[!metadata_HU$Sample.Type == 'Hatched Egg',])
-#Create a new object for common rownames for data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_UnhatchOnly))
-#Set the data file and metadata file to have only the data that includes these common names 
-dat_UnhatchOnly <- dat.001per[common.rownames,]
-metadata_UnhatchOnly <- metadata_UnhatchOnly[common.rownames,]
-#Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_UnhatchOnly), rownames(metadata_UnhatchOnly), ignore.row.order = TRUE)
-#Convert to relative abundance
-dat.ra_UnhatchOnly<-decostand(dat_UnhatchOnly, method = "total")
-
 ###Species Comparison
 ##ANOSIM - Compare Species
-ano_Unhatch_sp = anosim(dat.ra_UnhatchOnly, metadata_UnhatchOnly$Species, permutations = 9999, distance = "bray", strata = NULL)
-ano_Unhatch_sp
+ano_Unhatched_sp = anosim(dat.ra_UnhatchedOnly, metadata_UnhatchedOnly$Species, permutations = 9999, distance = "bray", strata = NULL)
+ano_Unhatched_sp
 #ANOSIM statistic R: -0.06869  
 #Significance: 0.8863 
 #####No differences between unhatched eggs by Species
 
 #SIMPER to find potential indicators
-dat.simp<-simper(dat.ra_UnhatchOnly, metadata_UnhatchOnly$Species, permutations = 9999)
+dat.simp<-simper(dat.ra_UnhatchedOnly, metadata_UnhatchedOnly$Species, permutations = 9999)
 sink("Simper_UnhatchedEggs.csv")
 #Creates csv of data in folder
 summary(dat.simp)
@@ -2308,7 +2465,7 @@ sink()
 #Closes output
 
 #SIMPER for Egg Discoloration
-dat.simp<-simper(dat.ra_UnhatchOnly, metadata_UnhatchOnly$Egg.Coloration, permutations = 9999)
+dat.simp<-simper(dat.ra_UnhatchedOnly, metadata_UnhatchedOnly$Egg.Coloration, permutations = 9999)
 sink("Simper_EggDiscoloration.csv")
 #Creates csv of data in folder
 summary(dat.simp)
@@ -2317,26 +2474,26 @@ sink()
 
 ###Beach Comparison
 #Remove CM Species
-metadata_UnhatchOnly_cc <- droplevels(metadata_UnhatchOnly[!metadata_UnhatchOnly$Species == 'CM',])
+metadata_UnhatchedOnly_cc <- droplevels(metadata_UnhatchedOnly[!metadata_UnhatchedOnly$Species == 'CM',])
 #Create a new object for common rownames for CC data
-common.rownames <- intersect(rownames(dat.001per),rownames(metadata_UnhatchOnly_cc))
+common.rownames <- intersect(rownames(dat.001per),rownames(metadata_UnhatchedOnly_cc))
 #Set the data file and metadata file to have only the data that includes these common names 
-dat_UnhatchOnly_cc <- dat.001per[common.rownames,]
-metadata_UnhatchOnly_cc <- metadata_UnhatchOnly_cc[common.rownames,]
+dat_UnhatchedOnly_cc <- dat.001per[common.rownames,]
+metadata_UnhatchedOnly_cc <- metadata_UnhatchedOnly_cc[common.rownames,]
 #Make sure all the row names are the same (equal) following the code
-all.equal(rownames(dat_UnhatchOnly_cc), rownames(metadata_UnhatchOnly_cc), ignore.row.order = TRUE)
+all.equal(rownames(dat_UnhatchedOnly_cc), rownames(metadata_UnhatchedOnly_cc), ignore.row.order = TRUE)
 #Convert to relative abundance
-dat.ra_UnhatchOnly_cc<-decostand(dat_UnhatchOnly_cc, method = "total")
+dat.ra_UnhatchedOnly_cc<-decostand(dat_UnhatchedOnly_cc, method = "total")
 
 ##ANOSIM - Compare Beach
-ano_Unhatch_beach = anosim(dat.ra_UnhatchOnly_cc, metadata_UnhatchOnly_cc$Beach, permutations = 9999, distance = "bray", strata = NULL)
-ano_Unhatch_beach
+ano_Unhatched_beach = anosim(dat.ra_UnhatchedOnly_cc, metadata_UnhatchedOnly_cc$Beach, permutations = 9999, distance = "bray", strata = NULL)
+ano_Unhatched_beach
 #ANOSIM statistic R: 0.06747
 #Significance: 0.032
 #####Significant differences between unhatched eggs by Beach
 
 #SIMPER to find potential indicators
-dat.simp<-simper(dat.ra_UnhatchOnly_cc, metadata_UnhatchOnly_cc$Beach, permutations = 9999)
+dat.simp<-simper(dat.ra_UnhatchedOnly_cc, metadata_UnhatchedOnly_cc$Beach, permutations = 9999)
 sink("Simper_UnhatchedEggsCC_Beach.csv")
 #Creates csv of data in folder
 summary(dat.simp)
@@ -2359,11 +2516,11 @@ write.csv(dat.rat_H_HU, "H_HU.csv")
 
 
 
-##########Top 10 Bar Charts
+###############Top GENUS Bar Charts
 #Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
 taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
 #Load in QIIME tree
-phy_tree=qza_to_phyloseq(tree="rooted-tree.qza")
+phy_tree = qza_to_phyloseq(tree="rooted-tree.qza")
 
 ###ALL Samples
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
@@ -2444,9 +2601,9 @@ plot_bar(top10g, x="Sample.Type", fill="Genus") +
 
 ###All Samples - Fort Lauderdale
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
-ASV.F = otu_table(as.matrix(dat_F), taxa_are_rows=FALSE)
+ASV.F = otu_table(as.matrix(dat_FT), taxa_are_rows=FALSE)
 tax.F = tax_table(as.matrix(taxonomy))
-meta.F = sample_data(metadata_F)
+meta.F = sample_data(metadata_FT)
 #Merge Files
 physeq_F = phyloseq(ASV.F,tax.F,meta.F,phy_tree)
 #If merge failed, try changing ASV.UF taxa_as_rows
@@ -2492,7 +2649,7 @@ plot_bar(top10g, x="Sample.Type", fill="Genus") +
 #Saved as "GenusBarChart_H"
 
 
-###Hatched vs Unhatched Only
+###Hatched vs Unhatched Only (Figure 4)
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
 ASV.HU = otu_table(as.matrix(dat_HU), taxa_are_rows=FALSE)
 tax.HU = tax_table(as.matrix(taxonomy))
@@ -2683,7 +2840,7 @@ plot_bar(top10g, x="R.Zone", fill="Genus") +
 
 ##Nest Sand
 #Make a phyloseq objects which includes the dat, metadata, and taxonomy
-ASV.N = otu_table(as.matrix(dat_N), taxa_are_rows=FALSE)
+ASV.N = otu_table(as.matrix(dat_nest), taxa_are_rows=FALSE)
 tax.N = tax_table(as.matrix(taxonomy))
 meta.N = sample_data(metadata_N)
 #Make Nest Number a factor
@@ -2717,15 +2874,277 @@ plot_bar(top10g, x="Nest.Number", fill="Genus") +
 
 
 
+###########Top PHYLA Bar Charts (Figure 3)
+#Import Taxonomy Table using the taxonomy file from QIIME (edit in excel, separate KPODCFGS and remove confidence)
+taxonomy = read.table(file= "Taxonomy.txt", header = TRUE, sep ="\t", row.names = 1)
+#Load in QIIME tree
+phy_tree=qza_to_phyloseq(tree="rooted-tree.qza")
 
-##########Venn Diagrams
+###Hatched vs Unhatched Only - CC
+#Make a phyloseq objects which includes the dat, metadata, and taxonomy
+ASV.CC.HU = otu_table(as.matrix(dat_cc_HU), taxa_are_rows=FALSE)
+tax.CC.HU = tax_table(as.matrix(taxonomy))
+meta.CC.HU = sample_data(metadata_cc_HU)
+#Merge Files
+physeq_cc_HU = phyloseq(ASV.CC.HU,tax.CC.HU,meta.CC.HU,phy_tree)
+#If merge failed, try changing ASV.UF taxa_as_rows
+
+#Use transform functions from microbiome package
+transform <- microbiome::transform
+#Merge rare taxa in to "Other"
+physeq_cc_HU_transform <- transform(physeq_cc_HU, "compositional")
+##Top 10 Genus Barchart
+#Sort the Genus by abundance and pick the top 20
+phylum_bar.names = sort(tapply(taxa_sums(physeq_cc_HU_transform), tax_table(physeq_cc_HU_transform)[, "Phylum"], sum), TRUE)[1:10]
+#Cut down the physeq data to only the top 10 Classes
+phylum_bar = subset_taxa(physeq_cc_HU_transform, Phylum %in% names(phylum_bar.names))
+#Plot New Barchart
+plot_bar(phylum_bar, x="Sample.Type", fill="Phylum") + 
+  labs(title = "Phylum Composition by Sample Type")+
+  geom_bar(aes(color=Genus, fill=Genus), stat="identity", position="stack")
+#Saved as "PhylumBarChart_HU_CC"
+
+
+###Hatched vs Unhatched Only - CM
+#Make a phyloseq objects which includes the dat, metadata, and taxonomy
+ASV.CM.HU = otu_table(as.matrix(dat_cm_HU), taxa_are_rows=FALSE)
+tax.CM.HU = tax_table(as.matrix(taxonomy))
+meta.CM.HU = sample_data(metadata_cm_HU)
+#Merge Files
+physeq_CM_HU = phyloseq(ASV.CM.HU,tax.CM.HU,meta.CM.HU,phy_tree)
+#If merge failed, try changing ASV.UF taxa_as_rows
+
+#Use transform functions from microbiome package
+transform <- microbiome::transform
+#Merge rare taxa in to "Other"
+physeq_CM_HU_transform <- transform(physeq_CM_HU, "compositional")
+##Top 10 Genus Barchart
+#Sort the Genus by abundance and pick the top 20
+phylum_bar.names = sort(tapply(taxa_sums(physeq_CM_HU_transform), tax_table(physeq_CM_HU_transform)[, "Phylum"], sum), TRUE)[1:10]
+#Cut down the physeq data to only the top 10 Classes
+phylum_bar = subset_taxa(physeq_CM_HU_transform, Phylum %in% names(phylum_bar.names))
+#Plot New Barchart
+plot_bar(phylum_bar, x="Sample.Type", fill="Phylum") + 
+  labs(title = "Phylum Composition by Sample Type")+
+  geom_bar(aes(color=Genus, fill=Genus), stat="identity", position="stack")
+#Saved as "PhylumBarChart_HU_CM"
+
+
+
+###Hatched vs Unhatched Only - Fort Lauderdale
+#Make a phyloseq objects which includes the dat, metadata, and taxonomy
+ASV.F.HU = otu_table(as.matrix(dat_F_HU), taxa_are_rows=FALSE)
+tax.F.HU = tax_table(as.matrix(taxonomy))
+meta.F.HU = sample_data(metadata_F_HU)
+#Merge Files
+physeq_F_HU = phyloseq(ASV.F.HU,tax.F.HU,meta.F.HU,phy_tree)
+#If merge failed, try changing ASV.UF taxa_as_rows
+
+#Use transform functions from microbiome package
+transform <- microbiome::transform
+#Merge rare taxa in to "Other"
+physeq_F_HU_transform <- transform(physeq_F_HU, "compositional")
+##Top 10 Genus Barchart
+#Sort the Genus by abundance and pick the top 20
+phylum_bar.names = sort(tapply(taxa_sums(physeq_F_HU_transform), tax_table(physeq_F_HU_transform)[, "Phylum"], sum), TRUE)[1:10]
+#Cut down the physeq data to only the top 10 Classes
+phylum_bar = subset_taxa(physeq_F_HU_transform, Phylum %in% names(phylum_bar.names))
+#Plot New Barchart
+plot_bar(phylum_bar, x="Sample.Type", fill="Phylum") + 
+  labs(title = "Phylum Composition by Sample Type")+
+  geom_bar(aes(color=Genus, fill=Genus), stat="identity", position="stack")
+#Saved as "PhylumBarChart_HU_F"
+
+
+
+###Hatched vs Unhatched Only - Hillsboro
+#Make a phyloseq objects which includes the dat, metadata, and taxonomy
+ASV.H.HU = otu_table(as.matrix(dat_H_HU), taxa_are_rows=FALSE)
+tax.H.HU = tax_table(as.matrix(taxonomy))
+meta.H.HU = sample_data(metadata_H_HU)
+#Merge Files
+physeq_H_HU = phyloseq(ASV.H.HU,tax.H.HU,meta.H.HU,phy_tree)
+#If merge failed, try changing ASV.UF taxa_as_rows
+
+#Use transform functions from microbiome package
+transform <- microbiome::transform
+#Merge rare taxa in to "Other"
+physeq_H_HU_transform <- transform(physeq_H_HU, "compositional")
+##Top 10 Genus Barchart
+#Sort the Genus by abundance and pick the top 20
+phylum_bar.names = sort(tapply(taxa_sums(physeq_H_HU_transform), tax_table(physeq_H_HU_transform)[, "Phylum"], sum), TRUE)[1:10]
+#Cut down the physeq data to only the top 10 Classes
+phylum_bar = subset_taxa(physeq_H_HU_transform, Phylum %in% names(phylum_bar.names))
+#Plot New Barchart
+plot_bar(phylum_bar, x="Sample.Type", fill="Phylum") + 
+  labs(title = "Phylum Composition by Sample Type")+
+  geom_bar(aes(color=Genus, fill=Genus), stat="identity", position="stack")
+#Saved as "PhylumBarChart_HU_H"
+
+
+
+
+
+
+####SIMPER  - Phylum Level
+#Make file from relative abundance data consolidated by phylum
+Phylum_Data <- read.delim("~/Grad School/Thesis/Data/Phylum_Data.txt", row.names=1)
+####Convert Raw Data to Relative Abundance
+dat.ra_phylum<-decostand(Phylum_Data, method = "total")
+
+###########Make Files Separated by Turtle Species and Beach
+#Create a new object for common rownames for CC data
+common.rownames <- intersect(rownames(dat.ra_phylum),rownames(metadata_cc_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cc_HU <- dat.ra_phylum[common.rownames,]
+metadata_cc_HU <- metadata_cc_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cc_HU), rownames(metadata_cc_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for CM data
+common.rownames <- intersect(rownames(dat.ra_phylum),rownames(metadata_cm_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cm_HU <- dat.ra_phylum[common.rownames,]
+metadata_cm_HU <- metadata_cm_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cm_HU), rownames(metadata_cm_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for FT data
+common.rownames <- intersect(rownames(dat.ra_phylum),rownames(metadata_F_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_F_HU <- dat.ra_phylum[common.rownames,]
+metadata_F_HU <- metadata_F_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_F_HU), rownames(metadata_F_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for Hillsboro data
+common.rownames <- intersect(rownames(dat.ra_phylum),rownames(metadata_H_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_H_HU <- dat.ra_phylum[common.rownames,]
+metadata_H_HU <- metadata_H_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_H_HU), rownames(metadata_H_HU), ignore.row.order = TRUE)
+
+
+#SIMPER
+###Open dat.simp to get overall dissimilarity value
+dat.simp<-simper(dat_cc_HU, metadata_cc_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_CC_phylum.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_cm_HU, metadata_cm_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_CM_phylum.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_F_HU, metadata_F_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_F_phylum.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_H_HU, metadata_H_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_H_phylum.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+
+
+####SIMPER - Genus Level
+#Make file with consolidated by genus
+Genus_Data <- read.delim("~/Grad School/Thesis/Data/Genus_Data.txt", row.names=1)
+#Flip columns to rows
+t.dat <- as.data.frame(t(Genus_Data))
+#Set t.dat as dat
+Genus_Data <- t.dat
+#Convert to relative abundance
+dat.ra_genus<-decostand(Genus_Data, method = "total")
+
+###########Make Files Separated by Turtle Species and Beach
+#Create a new object for common rownames for CC data
+common.rownames <- intersect(rownames(dat.ra_genus),rownames(metadata_cc_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cc_HU <- dat.ra_genus[common.rownames,]
+metadata_cc_HU <- metadata_cc_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cc_HU), rownames(metadata_cc_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for CM data
+common.rownames <- intersect(rownames(dat.ra_genus),rownames(metadata_cm_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_cm_HU <- dat.ra_genus[common.rownames,]
+metadata_cm_HU <- metadata_cm_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_cm_HU), rownames(metadata_cm_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for FT data
+common.rownames <- intersect(rownames(dat.ra_genus),rownames(metadata_F_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_F_HU <- dat.ra_genus[common.rownames,]
+metadata_F_HU <- metadata_F_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_F_HU), rownames(metadata_F_HU), ignore.row.order = TRUE)
+
+#Create a new object for common rownames for Hillsboro data
+common.rownames <- intersect(rownames(dat.ra_genus),rownames(metadata_H_HU))
+#Set the data file and metadata file to have only the data that includes these common names 
+dat_H_HU <- dat.ra_genus[common.rownames,]
+metadata_H_HU <- metadata_H_HU[common.rownames,]
+#Make sure all the row names are the same (equal) following the code
+all.equal(rownames(dat_H_HU), rownames(metadata_H_HU), ignore.row.order = TRUE)
+
+
+###SIMPER
+###Open dat.simp to get overall dissimilarity value
+dat.simp<-simper(dat_cc_HU, metadata_cc_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_CC_genus.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_cm_HU, metadata_cm_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_CM_genus.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_F_HU, metadata_F_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_F_genus.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+dat.simp<-simper(dat_H_HU, metadata_H_HU$Sample.Type, permutations = 9999)
+sink("Simper_HU_H_genus.csv")
+#Creates csv of data in folder
+summary(dat.simp)
+sink()
+#Closes output
+
+
+
+
+
+
+##########Venn Diagrams (Figure 5)
 ##Export Transposed Count Tables for Binary Editing in Excel
 dat.t_cc <- as.data.frame(t(dat_cc))
 write.csv(dat.t_cc, "CC_Binary.csv")
 dat.t_cm <- as.data.frame(t(dat_cm))
 write.csv(dat.t_cm, "CM_Binary.csv")
-dat.t_F <- as.data.frame(t(dat_F))
-write.csv(dat.t_F, "F_Binary.csv")
+dat.t_FT <- as.data.frame(t(dat_FT))
+write.csv(dat.t_FT, "F_Binary.csv")
 dat.t_H <- as.data.frame(t(dat_H))
 write.csv(dat.t_H, "H_Binary.csv")
 
@@ -2800,7 +3219,7 @@ all.equal(rownames(dat_RECAP_hatched), rownames(metadata_RECAP_hatched), ignore.
 #Convert to relative abundance
 dat.ra_RECAP_hatched<-decostand(dat_RECAP_hatched, method = "total")
 
-##ANOSIM - Compare Beaches
+#ANOSIM - Compare Beaches
 ano_RECAP_hatched = anosim(dat.ra_RECAP_hatched, metadata_RECAP_hatched$Beach, permutations = 9999, distance = "bray", strata = NULL)
 ano_RECAP_hatched
 #ANOSIM statistic R: 0.9259  
@@ -2822,7 +3241,7 @@ all.equal(rownames(dat_RECAP_unhatched), rownames(metadata_RECAP_unhatched), ign
 #Convert to relative abundance
 dat.ra_RECAP_unhatched<-decostand(dat_RECAP_unhatched, method = "total")
 
-##ANOSIM - Compare Beaches
+#ANOSIM - Compare Beaches
 ano_RECAP_unhatched = anosim(dat.ra_RECAP_unhatched, metadata_RECAP_unhatched$Beach, permutations = 9999, distance = "bray", strata = NULL)
 ano_RECAP_unhatched
 #ANOSIM statistic R: 0.7778 
@@ -2831,7 +3250,7 @@ ano_RECAP_unhatched
 
 
 
-###########SourceTracker
+###########SourceTracker (Figure 6)
 metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021_SourceTracker.txt", row.names=1)
 
 #Extract only those samples in common between the two tables
@@ -2863,3 +3282,68 @@ Results <- predict(st,otus[test.ix,], alpha1=alpha1, alpha2=alpha2)
 
 #Plot results
 plot(Results, type='pie')
+
+
+
+###########SourceTracker: cloaca, control sand, nest sand
+metadata <- read.delim("~/Grad School/Thesis/Data/Turtle_Metadata_2021_SourceTracker2.txt", row.names=1)
+#Extract only those samples in common between the two tables
+common.sample.ids <- intersect(rownames(metadata), rownames(dat.001per))
+otus <- dat.001per[common.sample.ids,]
+metadata <- metadata[common.sample.ids,]
+#Double-check that the mapping file and otu table had overlapping samples
+all.equal(rownames(otus),rownames(metadata))
+
+#Extract the source environments and source/sink indices
+train.ix <- which(metadata$SourceSink=='source')
+test.ix <- which(metadata$SourceSink=='sink')
+envs <- metadata$Env
+#Download latest SourceTracker release from: https://github.com/danknights/sourcetracker/releases
+#Load SourceTracker package
+setwd("~/Grad School/Thesis/Data/sourcetracker-1.0.1")
+source('src/SourceTracker.r')
+#Note: to skip tuning, run this instead:
+alpha1 <- alpha2 <- 0.001
+#Train SourceTracker object on training data
+st <- sourcetracker(otus[train.ix,], envs[train.ix])
+#Estimate source proportions in test data
+Results <- predict(st,otus[test.ix,], alpha1=alpha1, alpha2=alpha2)
+#This can be exported as a CSV to make averaged pie charts
+
+
+
+
+
+
+###########F/B Ratio
+#Export previously made phylum relative abundance table 
+#Remove all phyla except Firmicutes and Bacteriodetes
+#Remove Nest 395.CC.F from analysis since there were no unhatched eggs to compare
+write.csv(dat.ra_phylum, "Phylum_RAData.csv")
+
+###Paired t-test (hatched v unhatched) by Nest Number
+FB_Ratio_Nest_Pairedt <- read.delim("~/Grad School/Thesis/Data/FB_Ratio_Nest_Pairedt.txt", row.names=1)
+attach(FB_Ratio_Nest_Pairedt)
+
+#Test for normality
+shapiro.test(Hatched.Egg-Unhatched.Egg)
+#W = 0.7902, p-value = 0.0001205
+###Data is not normally distributed >> use non-parametric test
+
+#Non-parametric test: Two-tailed Wilcoxon test
+wilcox.test (Hatched.Egg, Unhatched.Egg, paired=T)
+#V = 70, p-value = 0.006131
+
+#Non-parametric test: One-tailed Wilcoxon test
+#Test if unhatched eggs have greater ratio than hatched eggs
+wilcox.test (Hatched.Egg, Unhatched.Egg, paired=T,alternative='less')
+#V = 70, p-value = 0.003065
+
+#Check Reverse: hatched eggs have greater ratio than unhatched eggs
+wilcox.test (Hatched.Egg, Unhatched.Egg, paired=T,alternative='greater')
+#V = 70, p-value = 0.9972
+
+detach(FB_Ratio_Nest_Pairedt)
+
+
+
