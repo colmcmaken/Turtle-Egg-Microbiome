@@ -1,14 +1,15 @@
 # Turtle-Egg-Microbiome
-Data and coding used for Master's thesis on loggerhead and green sea turtle egg microbiomes
+Data and coding used for Master's thesis and publication on loggerhead and green sea turtle egg microbiota
 
 **What's Included in Repository**
-1. R Code used for Microbiome Analysis (**Turtle_2021.R**)
+1. R Code used for Microbiota Analysis (**Turtle_2021.R**)
 2. R Code used for Environmental Data Analysis (**Turtle_2021_ENV.R**)
-3. SILVA Taxonomy file (**Taxonomy.xlsx**)
-4. Metadata File (**Turtle_Metadata_2021**)
-5. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
-6. Excel files used to create Krona Plots (**Krona Plots** file). To view and interact with Krona Plots: Download file > Enable content/macros > Click "Create Chart" > Save as HTML file > Open and Interact!
-7. Full SIMPER analysis lists (**SIMPER** file)
+3. QIIME Output files (feature table, phylogenetic tree, taxonomy within **QIIME Output** file)
+4. SILVA Taxonomy file (**Taxonomy.xlsx**)
+5. Metadata File (**Turtle_Metadata_2021**)
+6. Excel files with list of _potential_ egg pathogens and egg ASV comparisons (**ASV Lists** file)
+7. Excel files used to create Krona Plots (**Krona Plots** file). To view and interact with Krona Plots: Download file > Enable content/macros > Click "Create Chart" > Save as HTML file > Open and Interact!
+8. Full SIMPER analysis lists (**SIMPER** file)
 
 **Notes On File Names**
 * CC = Loggerhead samples (_**C**aretta **c**aretta_)
@@ -16,12 +17,14 @@ Data and coding used for Master's thesis on loggerhead and green sea turtle egg 
 * F = Fort Lauderdale Beach samples
 * H = Hillsboro Beach samples
 * HU = Hatched and Unhatched Egg comparisons
+* Sand = Control Sand
+* Nest (N) = Nest Sand
 
 Sequence data can be found on NCBI’s Short Read Archive: BioProject accession PRJNA804903
 
 **Project summary**
 
-The primary aims of this study characterized and compared the microbial communities (microbiomes) from the i) cloaca of nesting sea turtles; ii) sand within and surrounding the nests and iii) hatched and unhatched eggshells from two important species, the loggerhead (_Caretta caretta_) and green (_Chelonia mydas_) turtles. Samples were collected from nests in Fort Lauderdale and Hillsboro beaches in Broward County, Florida, where local nesting consisted of approximately 95% loggerhead, 5% green and 1% leatherback turtles (_Dermochelys coriacea_). Illumina MiSeq high throughput sequencing of 16S rRNA V3-V4 region amplicons was performed on 27 cloaca, 54 sand, and 162 egg samples. This study provides new insights into the microbial communities associated with egg failure in sea turtle nests and unveiled information about the impacts the environment has on microbial introduction.
+The primary aims of this study characterized and compared the bacterial communities (microbiota) from the i) cloaca of nesting sea turtles; ii) sand within and surrounding the nests and iii) hatched and unhatched eggshells from two important species, the loggerhead (_Caretta caretta_) and green (_Chelonia mydas_) turtles. Samples were collected from nests in Fort Lauderdale and Hillsboro beaches in Broward County, Florida, where local nesting consisted of approximately 95% loggerhead, 5% green and 1% leatherback turtles (_Dermochelys coriacea_). Illumina MiSeq high throughput sequencing of 16S rRNA V3-V4 region amplicons was performed on 27 cloaca, 54 sand, and 162 egg samples. This study provides new insights into the bacterial communities associated with egg failure in sea turtle nests and unveiled information about the impacts the environment has on bacterial introduction.
 
 **Total Sample Breakdown**
 
