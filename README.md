@@ -49,5 +49,6 @@ All sampling approved and conducted by authorized personnel under Florida Fish a
 Master's thesis can be found at https://nsuworks.nova.edu/hcas_etd_all/84
 
 Publication version can be accessed at
+McMaken,C.M., Burkholder,D.A., Milligan,R.J., & Lopez,J.V.(2023).Potential impacts of environmental bacteria on the microbiota of loggerhead (<i>Caretta caretta</i>) and green (<i>Chelonia mydas</i>) sea turtle eggs and their hatching success. <i>MicrobiologyOpen</i>, <i>12</i>, e1363. https://doi.org/10.1002/mbo3.1363
     **Please cite this paper if you use this repository:**
 
